@@ -120,8 +120,56 @@ svg.icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-wid
 .tool:hover:not(:disabled) .icon, .tool.primary .icon { color: var(--accentDeep); }
 .tool.primary .lbl { color: var(--ink); font-weight: 600; }
 .tool:disabled { opacity: .45; cursor: default; }
+.toolbar:empty { display: none; }
 
-main { width: 100%; max-width: 1040px; padding: 22px 24px 60px; }
+/* ------------------------------------------------------------ step indicator (lives in the toolbar zone) */
+.steps { display: flex; align-items: center; list-style: none; margin: 0; padding: 0 6px; gap: 0; }
+.step { display: flex; align-items: center; }
+.step + .step::before { content: ""; width: 36px; height: 2px; margin: 0 10px; background: var(--hairlineStrong); }
+.step.done + .step::before, .step.current::before { background: var(--accent); }
+.step button, .step .stepin { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 4px 2px; color: var(--inkMuted); font: inherit; font-size: 14px; }
+.step button { cursor: pointer; border-radius: 4px; }
+.step button:hover { color: var(--ink); }
+.step .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex: none;
+  border: 2px solid var(--hairlineStrong); color: var(--inkMuted); background: var(--paper); }
+.step .dot .icon { font-size: 15px; }
+.step.current .stepin { color: var(--ink); font-weight: 600; }
+.step.current .dot { border-color: var(--accent); background: var(--accent); color: var(--primaryInk); }
+.step.done .dot { border-color: var(--accent); color: var(--accentDeep); }
+
+/* ------------------------------------------------------------ action bar: the one place for "what happens next" */
+.actionbar { position: sticky; bottom: 0; z-index: 5; flex: none; display: flex; align-items: center; gap: 12px;
+  padding: 12px 24px; background: var(--toolbarBg); border-top: 1px solid var(--hairline); box-shadow: 0 -6px 16px var(--cardShadow); }
+.actionbar[hidden] { display: none; }
+.actionbar .msg { color: var(--inkSoft); font-size: 14px; flex: 1 1 0; min-width: 0; }
+.actionbar button { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; flex: none; white-space: nowrap; }
+.actionbar button .icon { font-size: 18px; }
+
+/* ------------------------------------------------------------ calls to action */
+.addtile { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 18px; margin-bottom: 14px; border-radius: var(--radius);
+  border: 2px dashed var(--hairlineStrong); background: none; color: var(--inkMuted); font-size: 15px; cursor: pointer; }
+.addtile:hover { border-color: var(--accent); color: var(--ink); background: color-mix(in oklch, var(--accent) 8%, transparent); }
+.addtile .icon { font-size: 20px; }
+.empty { text-align: center; padding: 36px 20px; }
+.empty h3 { font-size: 18px; margin-bottom: 6px; }
+.empty button { margin-top: 8px; padding: 10px 20px; }
+.flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.flow .arrow { color: var(--inkMuted); font-size: 20px; }
+.flow .end { display: flex; align-items: center; gap: 8px; }
+.note { border-left: 4px solid var(--accent); }
+.note ul { margin: 6px 0 0; padding-left: 20px; color: var(--inkMuted); font-size: 14px; }
+.filepick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.filepick input[type=file] { display: none; }
+.filepick .chosen { color: var(--inkMuted); font-size: 14px; }
+
+@media (max-width: 760px) {
+  .step:not(.current) .lbl { display: none; }
+  .step + .step::before { width: 18px; margin: 0 6px; }
+  .actionbar { padding: 10px 14px; flex-wrap: wrap; }
+  .actionbar .msg { flex-basis: 100%; }
+}
+
+main { width: 100%; max-width: 1040px; flex: 1 0 auto; padding: 22px 24px 40px; }
 h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin: 0 0 4px; }
 h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 12px; }
 .hint, p.hint { color: var(--inkMuted); margin: 0 0 16px; font-size: 14px; }

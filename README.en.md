@@ -144,11 +144,21 @@ Then open `http://<truenas-ip>:30290`.
 
 ## Usage
 
-- **Apply a TRaSH profile**: **Import** tab → pick the target instance (Radarr or Sonarr) → source *TRaSH Guides* → choose the profile, adjust the format groups → **Analyse** → **Apply**.
-- **Paste TRaSH JSON**: the JSON of a custom format or of a quality profile, copied from the guides' repository or website → source *File / pasted JSON* → **Analyse** → **Apply**.
-- **Copy a setup from one instance to another**: **Import** tab → *Another instance* → source + target → **Analyse**. Ticking a profile also ticks what it depends on (scored formats, an indexer's sync profile).
-- **Archive / share**: **Export** tab → pick the instance → **Load** → tick → **Download**.
-- **Roll back**: **Backups** tab, then re-import the file you want with "overwrite" enabled (items created in the meantime are not deleted).
+Every screen follows a step-by-step path (the indicator is at the top) and **all actions live in the bottom bar**, always visible: you move forward, you never have to scroll back up.
+
+**Export a configuration** (to reuse it yourself or send it to someone)
+
+1. **Export** tab: pick the instance; its configuration loads by itself.
+2. Untick whatever you don't want to include. Ticking a profile also ticks what it depends on.
+3. **Download the file**. It contains no API key or password: keep it as a backup, re-import it on another of your instances, or send it.
+
+**Import a configuration**
+
+1. **Choose**: the instance to configure, then where the configuration comes from: *a file or pasted JSON* (a Portarr export, a custom format or a TRaSH profile), *another instance* of the same application, or the *TRaSH Guides* (Radarr and Sonarr). Then **Review changes**.
+2. **Review**: the list of what will be created, updated or skipped, field by field. Untick what you don't want, then **Apply**. "Change" or step 1 of the indicator take you back to the settings without losing anything.
+3. **Done**: the summary, and the link to the target's backup made right before writing.
+
+**Roll back**: **Backups** tab, then re-import the file you want (*Import → A file*) with "overwrite" enabled. Items created in the meantime are not deleted.
 
 "Overwrite existing items" applies to items matched by name: custom formats, quality profiles, sync profiles, indexers, proxies. Sizes, naming and media management are always updated when ticked.
 

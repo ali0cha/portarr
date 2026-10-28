@@ -23,7 +23,7 @@ const I18N = {
     note_sizes: "min {0} · preferred {1} · max {2} MB/min", note_metadata: "{0} album types · {1} secondary types · {2} statuses", note_sync: "RSS {0} · automatic {1} · interactive {2} · min. seeders {3}",
     note_indexer: "{0} · priority {1} · profile {2}", note_proxy: "{0}", on: "on", off: "off",
     note_secrets: "Secrets are never exported: {0}",
-    source: "Source", src_file: "File / pasted JSON", src_instance: "Another instance", choose_file: "Choose a .json file",
+    source: "Source", src_file: "A file or pasted JSON", src_instance: "Another instance", choose_file: "Choose a .json file",
     paste_ph: "…or paste here a Portarr export or TRaSH-Guides custom format JSON",
     target: "Target instance", overwrite: "Overwrite existing items that differ (custom formats, quality profiles, sync profiles, indexers…)",
     overwrite_hint: "Quality sizes, naming and media management are always updated when selected.",
@@ -35,6 +35,27 @@ const I18N = {
     bk_hint: "Automatic snapshots of an instance taken just before each import. To roll back, import one of these files with “overwrite” enabled (items created by the import are not deleted).",
     bk_empty: "No backup yet.", date: "Date", size: "Size", file: "File",
     changes: "{0} change(s)", loading: "Loading…",
+    exp_step1: "Instance", exp_step2: "Content", exp_step3: "File",
+    exp_pick_title: "Instance to export from", exp_content_title: "What to include",
+    exp_selected: "{0} item(s) selected", exp_no_secrets: "no API key or password is included", exp_none: "Select at least one item to export.",
+    exp_loading_msg: "Loading the configuration…", download_file: "Download the file",
+    exp_saved_title: "File saved", exp_saved_text: "{0} is in your browser's downloads folder. What now?",
+    exp_next_keep: "Keep it as a backup, or reuse it on another instance of yours: Import → A file.",
+    exp_next_share: "Send it to someone: it holds your configuration only, never an API key or a password.",
+    exp_goto_import: "Go to Import",
+    imp_step1: "Choose", imp_step2: "Review", imp_step3: "Done",
+    imp_target_title: "Instance to configure", imp_target_hint: "The configuration is applied to this instance. Nothing changes before you confirm.",
+    imp_source_title: "Configuration to apply",
+    src_pasted: "pasted JSON", pick_file: "Choose a .json file", file_chosen: "File: {0}", or_paste: "or paste its content:",
+    imp_need_file: "Choose a file, or paste its content, to continue.", imp_need_inst: "Choose the instance to copy from.",
+    imp_ready: "Next, you review every change: nothing is written to {0} yet.", imp_review: "Review changes",
+    rev_from: "From", rev_to: "To", rev_change: "Change", rev_back: "Back",
+    rev_info: "{0} change(s) will be applied to {1}. A backup is saved first.",
+    rev_nothing: "Nothing to apply: {0} already matches.", rev_pick: "Select at least one change to apply.",
+    done_text: "{0} change(s) applied to {1}.", done_undo: "To undo: Import → A file, choose the backup below, and tick “overwrite”.",
+    inst_empty_title: "No instance yet", inst_empty_cta: "Add your first Radarr, Sonarr, Lidarr, Whisparr or Prowlarr instance to get started.",
+    inst_add_tile: "Add an instance",
+    imp_no_same_app: "There is no other {0} instance to copy from. Add one in Instances, or use a file.",
     src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
     trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_pick: "Choose a profile…",
     trash_required: "Required by the profile", trash_groups: "Optional format groups", trash_group_default: "recommended", trash_req: "required",
@@ -62,7 +83,7 @@ const I18N = {
     note_sizes: "min {0} · préféré {1} · max {2} Mo/min", note_metadata: "{0} types d'album · {1} types secondaires · {2} statuts", note_sync: "RSS {0} · automatique {1} · interactif {2} · seeders min. {3}",
     note_indexer: "{0} · priorité {1} · profil {2}", note_proxy: "{0}", on: "oui", off: "non",
     note_secrets: "Les secrets ne sont jamais exportés : {0}",
-    source: "Source", src_file: "Fichier / JSON collé", src_instance: "Une autre instance", choose_file: "Choisir un fichier .json",
+    source: "Source", src_file: "Un fichier ou du JSON collé", src_instance: "Une autre instance", choose_file: "Choisir un fichier .json",
     paste_ph: "…ou collez ici un export Portarr ou un JSON de format personnalisé TRaSH-Guides",
     target: "Instance cible", overwrite: "Écraser les éléments existants qui diffèrent (formats personnalisés, profils de qualité, profils de synchronisation, indexeurs…)",
     overwrite_hint: "Les tailles par qualité, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.",
@@ -74,6 +95,27 @@ const I18N = {
     bk_hint: "Instantanés automatiques d'une instance pris juste avant chaque import. Pour revenir en arrière, importez l'un de ces fichiers avec « écraser » activé (les éléments créés par l'import ne sont pas supprimés).",
     bk_empty: "Aucune sauvegarde.", date: "Date", size: "Taille", file: "Fichier",
     changes: "{0} changement(s)", loading: "Chargement…",
+    exp_step1: "Instance", exp_step2: "Contenu", exp_step3: "Fichier",
+    exp_pick_title: "Instance à exporter", exp_content_title: "Ce qu'il faut inclure",
+    exp_selected: "{0} élément(s) sélectionné(s)", exp_no_secrets: "aucune clé API ni mot de passe n'est inclus", exp_none: "Sélectionnez au moins un élément à exporter.",
+    exp_loading_msg: "Chargement de la configuration…", download_file: "Télécharger le fichier",
+    exp_saved_title: "Fichier enregistré", exp_saved_text: "{0} est dans le dossier de téléchargements de votre navigateur. Et maintenant ?",
+    exp_next_keep: "Gardez-le comme sauvegarde, ou réutilisez-le sur une autre de vos instances : Import → Un fichier.",
+    exp_next_share: "Envoyez-le à quelqu'un : il ne contient que votre configuration, jamais de clé API ni de mot de passe.",
+    exp_goto_import: "Aller à l'Import",
+    imp_step1: "Choisir", imp_step2: "Vérifier", imp_step3: "Terminé",
+    imp_target_title: "Instance à configurer", imp_target_hint: "La configuration est appliquée à cette instance. Rien ne change avant votre confirmation.",
+    imp_source_title: "Configuration à appliquer",
+    src_pasted: "JSON collé", pick_file: "Choisir un fichier .json", file_chosen: "Fichier : {0}", or_paste: "ou collez son contenu :",
+    imp_need_file: "Choisissez un fichier, ou collez son contenu, pour continuer.", imp_need_inst: "Choisissez l'instance à copier.",
+    imp_ready: "Ensuite, vous vérifiez chaque changement : rien n'est encore écrit sur {0}.", imp_review: "Vérifier les changements",
+    rev_from: "Depuis", rev_to: "Vers", rev_change: "Modifier", rev_back: "Retour",
+    rev_info: "{0} changement(s) seront appliqués à {1}. Une sauvegarde est faite d'abord.",
+    rev_nothing: "Rien à appliquer : {0} correspond déjà.", rev_pick: "Sélectionnez au moins un changement à appliquer.",
+    done_text: "{0} changement(s) appliqué(s) à {1}.", done_undo: "Pour annuler : Import → Un fichier, choisissez la sauvegarde ci-dessous et cochez « écraser ».",
+    inst_empty_title: "Aucune instance", inst_empty_cta: "Ajoutez votre première instance Radarr, Sonarr, Lidarr, Whisparr ou Prowlarr pour commencer.",
+    inst_add_tile: "Ajouter une instance",
+    imp_no_same_app: "Il n'y a pas d'autre instance {0} à copier. Ajoutez-en une dans Instances, ou utilisez un fichier.",
     src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
     trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_pick: "Choisir un profil…",
     trash_required: "Imposés par le profil", trash_groups: "Groupes de formats optionnels", trash_group_default: "recommandé", trash_req: "requis",
@@ -104,6 +146,11 @@ function h(tag, props, ...kids) {
   return el;
 }
 
+// replaceChildren() would print null and arrays as text; this keeps only real nodes and strings.
+function fill(el, ...kids) {
+  el.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false).map((k) => (k.nodeType ? k : String(k))));
+}
+
 // Feather-style line icons (static strings, parsed as SVG).
 const ICONS = {
   server: '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/>',
@@ -116,6 +163,7 @@ const ICONS = {
   check: '<path d="M20 6L9 17l-5-5"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
 };
 function icon(name) {
@@ -202,8 +250,8 @@ const S = {
   tab: "instances",
   instances: [],
   editing: null, // null | "new" | instance id
-  exp: { id: "", bundle: null, sel: {} },
-  imp: { mode: "file", text: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
+  exp: { id: "", bundle: null, sel: {}, error: null, saved: null },
+  imp: { step: 1, mode: "file", text: "", fileName: "", sourceLabel: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
     trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0 } },
 };
 
@@ -223,12 +271,40 @@ function setToolLabel(btn, text) {
   btn.title = text;
 }
 
+// The bottom bar is the one place for "what happens next": a short message and the next action(s).
+const bar = {
+  set(info, ...buttons) {
+    const el = document.getElementById("actionbar");
+    el.hidden = false;
+    el.replaceChildren(h("div", { class: "msg grow" }, info), ...buttons.filter(Boolean));
+  },
+  clear() {
+    const el = document.getElementById("actionbar");
+    el.hidden = true;
+    el.replaceChildren();
+  },
+};
+function actionBtn(text, onclick, { primary = false, disabled = false, iconName = null } = {}) {
+  return h("button", { class: primary ? "primary" : "", onclick, disabled }, iconName ? icon(iconName) : null, h("span", { class: "lbl" }, text));
+}
+
+// Progress indicator, shown in the toolbar zone. Steps already done can be clicked to go back.
+function stepper(labels, current, goTo = {}) {
+  return h("ol", { class: "steps" }, labels.map((label, i) => {
+    const n = i + 1;
+    const state = n < current ? "done" : n === current ? "current" : "todo";
+    const inner = [h("span", { class: "dot" }, state === "done" ? icon("check") : String(n)), h("span", { class: "lbl" }, label)];
+    return h("li", { class: `step ${state}`, "aria-current": state === "current" ? "step" : null },
+      state === "done" && goTo[n] ? h("button", { onclick: goTo[n] }, inner) : h("span", { class: "stepin" }, inner));
+  }));
+}
+
 async function loadInstances() {
   S.instances = await api("/api/instances");
 }
 
-function instanceSelect(value, onchange, exclude) {
-  const opts = S.instances.filter((i) => i.id !== exclude);
+function instanceSelect(value, onchange, exclude, app) {
+  const opts = S.instances.filter((i) => i.id !== exclude && (!app || i.app === app));
   const sel = h("select", { onchange: (e) => onchange(e.target.value) },
     opts.map((i) => h("option", { value: i.id }, `${i.name} (${cap(i.app)})`)));
   sel.value = opts.some((i) => i.id === value) ? value : opts[0]?.id ?? "";
@@ -238,6 +314,7 @@ function instanceSelect(value, onchange, exclude) {
 async function render() {
   renderTabs();
   tools.set([]);
+  bar.clear();
   const view = document.getElementById("view");
   view.replaceChildren(h("p", { class: "hint" }, t("loading")));
   try {
@@ -250,13 +327,15 @@ async function render() {
 }
 
 function needInstances() {
-  tools.set([toolBtn("plus", t("inst_add"), () => { S.tab = "instances"; S.editing = "new"; render(); }, { primary: true })]);
-  return h("div", { class: "card" }, h("p", { class: "hint", style: "margin:0" }, t("inst_empty")));
+  tools.set([]);
+  bar.clear();
+  return h("div", { class: "card empty" }, h("h3", null, t("inst_empty_title")), h("p", { class: "hint" }, t("inst_empty_cta")),
+    h("button", { class: "primary", onclick: () => { S.tab = "instances"; S.editing = "new"; render(); } }, icon("plus"), " ", t("inst_add")));
 }
 
 // ---------------------------------------------------------------- instances
 function viewInstances() {
-  tools.set([toolBtn("plus", t("inst_add"), () => { S.editing = "new"; render(); }, { primary: !S.editing, disabled: !!S.editing })]);
+  tools.set([]);
   const list = S.instances.length
     ? S.instances.map((i) => h("div", { class: "card" },
       h("div", { class: "row spread" },
@@ -273,9 +352,11 @@ function viewInstances() {
             if (!confirm(t("delete_confirm", i.name))) return;
             try { await api(`/api/instances/${i.id}`, { method: "DELETE" }); render(); } catch (e) { toast(e.message, "error"); }
           } }, t("delete"))))))
-    : [h("p", { class: "hint" }, t("inst_empty"))];
+    : [];
+  const addTile = h("button", { class: "addtile", onclick: () => { S.editing = "new"; render(); } }, icon("plus"), t("inst_add_tile"));
 
-  return h("div", null, h("h2", null, t("tab_instances")), h("p", { class: "hint" }, t("inst_hint")), list, S.editing ? instanceForm() : null);
+  return h("div", null, h("h2", null, t("tab_instances")), h("p", { class: "hint" }, t("inst_hint")), list,
+    S.editing ? instanceForm() : S.instances.length ? addTile : needInstances());
 }
 
 function instanceForm() {
@@ -418,41 +499,69 @@ function filterBundle(bundle, sel) {
 function viewExport() {
   if (!S.instances.length) return needInstances();
   const e = S.exp;
-  if (!S.instances.some((i) => i.id === e.id)) { e.id = S.instances[0].id; e.bundle = null; }
-  const body = h("div");
+  if (!S.instances.some((i) => i.id === e.id)) Object.assign(e, { id: S.instances[0].id, bundle: null, saved: null, error: null });
   const total = () => Object.values(e.sel).reduce((n, s) => n + s.size, 0);
+  const statusBox = h("div"), treeBox = h("div"), savedBox = h("div", { style: "scroll-margin-bottom: 100px" }); // keep clear of the action bar
 
-  const dl = toolBtn("download", t("download_short"), () => {
+  function chrome() {
+    tools.set([stepper([t("exp_step1"), t("exp_step2"), t("exp_step3")], e.saved ? 3 : e.bundle ? 2 : 1)]);
+    const n = total();
+    const info = e.bundle ? (n ? `${t("exp_selected", n)} · ${t("exp_no_secrets")}` : t("exp_none")) : e.error ? "" : t("exp_loading_msg");
+    bar.set(info, actionBtn(t("download_file"), download, { primary: true, iconName: "download", disabled: !e.bundle || n === 0 }));
+  }
+  function showStatus() {
+    fill(statusBox, 
+      !e.bundle && !e.error ? h("p", { class: "hint" }, t("loading")) : null,
+      e.error ? h("div", { class: "card" }, h("p", { class: "err", style: "margin:0 0 10px" }, e.error), h("button", { onclick: load }, t("retry"))) : null);
+  }
+  function showTree() {
+    fill(treeBox, e.bundle ? h("div", null,
+      h("h3", { style: "margin:18px 0 6px" }, t("exp_content_title")),
+      h("p", { class: "hint" }, t("loaded_from", cap(e.bundle.source.app), e.bundle.source.version), " · ", t("scored_cf_note")),
+      selectionTree(bundleRows(e.bundle), e.sel, { bundle: e.bundle, onChange: chrome })) : null);
+  }
+  function showSaved() {
+    fill(savedBox, e.saved ? h("div", { class: "card note" },
+      h("h3", null, "✓ ", t("exp_saved_title")),
+      h("p", { class: "hint", style: "margin:0" }, t("exp_saved_text", e.saved)),
+      h("ul", null, h("li", null, t("exp_next_keep")), h("li", null, t("exp_next_share"))),
+      h("div", { style: "margin-top:12px" }, h("button", { onclick: () => { S.tab = "import"; render(); } }, t("exp_goto_import")))) : null);
+  }
+  function download() {
     const b = e.bundle;
-    const json = JSON.stringify(filterBundle(b, e.sel), null, 2);
-    const a = h("a", { href: URL.createObjectURL(new Blob([json], { type: "application/json" })),
-      download: `${b.source.app}-${slug(b.source.instanceName)}-${new Date().toISOString().slice(0, 10)}.json` });
+    const name = `${b.source.app}-${slug(b.source.instanceName)}-${new Date().toISOString().slice(0, 10)}.json`;
+    const a = h("a", { href: URL.createObjectURL(new Blob([JSON.stringify(filterBundle(b, e.sel), null, 2)], { type: "application/json" })), download: name });
     document.body.append(a); a.click(); a.remove();
-  }, { disabled: true });
-  const update = () => { dl.disabled = !e.bundle || total() === 0; };
+    e.saved = name;
+    showSaved();
+    chrome();
+    savedBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  async function load() {
+    const id = e.id;
+    Object.assign(e, { bundle: null, error: null, saved: null });
+    showStatus(); showTree(); showSaved(); chrome();
+    try {
+      const b = await api(`/api/instances/${id}/export`);
+      if (e.id !== id) return; // the user picked another instance meanwhile
+      e.bundle = b;
+      const rows = bundleRows(b);
+      e.sel = {};
+      SECTIONS.forEach((s) => { if (rows[s]?.length) e.sel[s] = new Set(NOT_BY_DEFAULT.includes(s) ? [] : rows[s].map((r) => r.name)); });
+    } catch (err) {
+      if (e.id !== id) return;
+      e.error = err.message;
+    }
+    showStatus(); showTree(); chrome();
+  }
 
-  const select = instanceSelect(e.id, (v) => { e.id = v; e.bundle = null; body.replaceChildren(); update(); });
-  const load = toolBtn("refresh", t("load"), (ev) => busy(ev.currentTarget, t("loading"), async () => {
-    e.id = select.value;
-    e.bundle = await api(`/api/instances/${e.id}/export`);
-    const rows = bundleRows(e.bundle);
-    e.sel = {};
-    SECTIONS.forEach((s) => { if (rows[s]?.length) e.sel[s] = new Set(NOT_BY_DEFAULT.includes(s) ? [] : rows[s].map((r) => r.name)); });
-    showBundle();
-  }), { primary: true });
-  tools.set([load, dl]);
-
-  const showBundle = () => {
-    const b = e.bundle;
-    body.replaceChildren(
-      h("p", { class: "hint" }, t("loaded_from", cap(b.source.app), b.source.version), " · ", t("scored_cf_note")),
-      selectionTree(bundleRows(b), e.sel, { bundle: b, onChange: update }));
-    update();
-  };
-  if (e.bundle) showBundle();
+  const select = instanceSelect(e.id, (v) => { e.id = v; load(); });
+  if (!e.bundle && !e.error) load(); else { showStatus(); showTree(); showSaved(); chrome(); }
 
   return h("div", null, h("h2", null, t("tab_export")), h("p", { class: "hint" }, t("exp_hint")),
-    h("div", { class: "card" }, h("label", { class: "field", style: "margin:0" }, h("span", null, t("instance")), select)), body);
+    h("div", { class: "card" }, h("h3", null, t("exp_pick_title")),
+      h("div", { class: "row" }, h("div", { class: "grow" }, select), h("button", { onclick: load }, icon("refresh"), " ", t("refresh")))),
+    statusBox, treeBox, savedBox);
 }
 
 // ---------------------------------------------------------------- import
@@ -464,102 +573,161 @@ function planRows(plan) {
   return rows;
 }
 
+const impSteps = () => [t("imp_step1"), t("imp_step2"), t("imp_step3")];
+
+async function runPreview(m) {
+  m.plan = await api(`/api/instances/${m.targetId}/import/preview`, { method: "POST", body: { bundle: m.bundle, overwrite: m.overwrite } });
+  m.sel = {};
+  for (const [s, items] of Object.entries(m.plan.sections)) {
+    m.sel[s] = new Set(items.filter((i) => (i.action === "create" || i.action === "update") && !NOT_BY_DEFAULT.includes(s)).map((i) => i.name));
+  }
+}
+
+// Import is three screens: 1. choose what and where, 2. review every change, 3. done.
 function viewImport() {
   if (!S.instances.length) return needInstances();
   const m = S.imp;
-  if (m.result) return importResult();
   if (!S.instances.some((i) => i.id === m.targetId)) m.targetId = S.instances[0].id;
+  if (m.result) return importResult();
+  if (m.step === 2 && m.plan) return importReview();
+  m.step = 1;
+  return importSetup();
+}
 
-  const out = h("div");
+function importSetup() {
+  const m = S.imp;
+  const target = S.instances.find((i) => i.id === m.targetId);
+  tools.set([stepper(impSteps(), 1)]);
+
+  const targetSelect = instanceSelect(m.targetId, (v) => { m.targetId = v; if (m.srcId === v) m.srcId = ""; m.plan = null; render(); });
+  const srcSelect = instanceSelect(m.srcId, (v) => { m.srcId = v; refresh(); }, m.targetId, target.app); // a bundle only fits the same application
+  m.srcId = srcSelect.value; // keep the state in line with what the list shows
+
+  // why the user cannot continue yet (null = ready)
+  const why = () => {
+    if (m.mode === "file") return m.text.trim() ? null : t("imp_need_file");
+    if (m.mode === "instance") return m.srcId ? null : t("imp_need_inst");
+    if (target.app !== "radarr" && target.app !== "sonarr") return t("trash_only");
+    return m.trash.profileId ? null : t("need_profile");
+  };
+  function refresh() {
+    const reason = why();
+    bar.set(reason ?? t("imp_ready", target.name), actionBtn(t("imp_review"), go, { primary: true, disabled: !!reason, iconName: "search" }));
+  }
+  function go(ev) {
+    return busy(ev.currentTarget, t("analysing"), async () => {
+      let bundle, label;
+      if (m.mode === "instance") {
+        if (m.srcId === m.targetId) throw new Error(t("same_instance"));
+        bundle = await api(`/api/instances/${m.srcId}/export`);
+        label = S.instances.find((i) => i.id === m.srcId).name;
+      } else if (m.mode === "trash") {
+        bundle = await api(`/api/trash/${m.trash.app}/build`, { method: "POST", body: { profile_id: m.trash.profileId, formats: [...m.trash.selected] } });
+        label = `TRaSH Guides · ${m.trash.detail?.profile.name ?? ""}`;
+      } else {
+        bundle = await api("/api/import/parse", { method: "POST", body: { text: m.text, app: target.app } });
+        label = m.fileName || t("src_pasted");
+      }
+      m.bundle = bundle;
+      m.sourceLabel = label;
+      await runPreview(m);
+      m.step = 2;
+      render();
+    });
+  }
+
+  const chosen = h("span", { class: "chosen" }, m.fileName ? t("file_chosen", m.fileName) : "");
+  const text = h("textarea", { placeholder: t("paste_ph"), oninput: (ev) => { m.text = ev.target.value; m.fileName = ""; chosen.textContent = ""; refresh(); } });
+  text.value = m.text;
+  const file = h("input", { type: "file", accept: ".json,application/json", onchange: async (ev) => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    m.text = await f.text();
+    m.fileName = f.name;
+    text.value = m.text;
+    chosen.textContent = t("file_chosen", f.name);
+    refresh();
+  } });
+  const fileBox = h("div", null,
+    h("div", { class: "filepick" }, h("button", { onclick: () => file.click() }, icon("upload"), " ", t("pick_file")), file, chosen),
+    h("div", { class: "hint", style: "margin:0 0 6px" }, t("or_paste")), text);
+  const instBox = h("div", null, srcSelect.options.length
+    ? h("label", { class: "field", style: "margin:0" }, h("span", null, t("instance")), srcSelect)
+    : h("p", { class: "hint", style: "margin:0" }, t("imp_no_same_app", cap(target.app))));
+  const trashBox = trashPanel(m, target.app, refresh);
+
+  const panels = { file: fileBox, instance: instBox, trash: trashBox };
+  const modes = h("div", { class: "seg" });
+  const setMode = (mode) => {
+    m.mode = mode;
+    Object.entries(panels).forEach(([k, el]) => { el.hidden = k !== mode; });
+    modes.replaceChildren(...[["file", "src_file"], ["instance", "src_instance"], ["trash", "src_trash"]].map(([k, label]) =>
+      h("button", { class: mode === k ? "active" : "", onclick: () => setMode(k) }, t(label))));
+    refresh();
+  };
+
+  const node = h("div", null, h("h2", null, t("tab_import")), h("p", { class: "hint" }, t("imp_hint")),
+    h("div", { class: "card" }, h("h3", null, t("imp_target_title")),
+      h("div", { class: "hint", style: "margin:0 0 10px" }, t("imp_target_hint")), targetSelect),
+    h("div", { class: "card" }, h("h3", null, t("imp_source_title")), modes, fileBox, instBox, trashBox));
+  setMode(m.mode);
+  return node;
+}
+
+function importReview() {
+  const m = S.imp;
+  const target = S.instances.find((i) => i.id === m.targetId);
+  const back = () => { m.step = 1; render(); };
+  tools.set([stepper(impSteps(), 2, { 1: back })]);
   const count = () => Object.values(m.sel).reduce((n, s) => n + s.size, 0);
-  const apply = toolBtn("check", t("apply_n", 0), (ev) => {
-    const target = S.instances.find((i) => i.id === m.targetId);
+  const listBox = h("div");
+
+  function chrome() {
+    const n = count();
+    const nothing = m.plan.summary.create + m.plan.summary.update === 0;
+    bar.set(n ? t("rev_info", n, target.name) : nothing ? t("rev_nothing", target.name) : t("rev_pick"),
+      actionBtn(t("rev_back"), back, { iconName: "back" }),
+      actionBtn(t("apply_n", n), apply, { primary: true, disabled: n === 0, iconName: "check" }));
+  }
+  function showList() {
+    const sum = m.plan.summary;
+    fill(listBox, 
+      (m.bundle.warnings ?? []).map((w) => h("div", { class: "warn", style: "margin:0 0 6px" }, `⚠ ${w}`)),
+      h("div", { class: "summary" }, ["create", "update", "unchanged", "skip"].map((k) => h("span", { class: `badge b-${k}` }, `${sum[k]} ${t(`a_${k}`)}`))),
+      selectionTree(planRows(m.plan), m.sel, { bundle: m.bundle, onChange: chrome }));
+  }
+  function apply(ev) {
     if (!confirm(t("confirm_apply", count(), target.name))) return;
     return busy(ev.currentTarget, t("applying"), async () => {
       const selection = Object.fromEntries(Object.entries(m.sel).map(([s, set]) => [s, [...set]]));
       m.result = await api(`/api/instances/${m.targetId}/import/apply`, { method: "POST", body: { bundle: m.bundle, selection, overwrite: m.overwrite } });
       render();
     });
-  }, { disabled: true });
-  const updateApply = () => {
-    setToolLabel(apply, t("apply_n", count()));
-    apply.disabled = !m.plan || count() === 0;
-  };
-
-  const target = instanceSelect(m.targetId, (v) => { m.targetId = v; m.plan = null; render(); });
-  const text = h("textarea", { placeholder: t("paste_ph"), oninput: (e) => { m.text = e.target.value; } });
-  text.value = m.text;
-  const file = h("input", { type: "file", accept: ".json,application/json", onchange: async (e) => {
-    const f = e.target.files[0];
-    if (f) { m.text = await f.text(); text.value = m.text; }
+  }
+  const overwrite = h("input", { type: "checkbox", checked: m.overwrite, onchange: async (ev) => {
+    m.overwrite = ev.target.checked;
+    try { await runPreview(m); showList(); chrome(); } catch (err) { toast(err.message, "error"); }
   } });
-  const srcSelect = instanceSelect(m.srcId, (v) => { m.srcId = v; }, m.targetId);
-  const targetApp = S.instances.find((i) => i.id === m.targetId)?.app;
-  const trashBox = trashPanel(m, targetApp);
-  const fileBox = h("div", null, h("label", { class: "field" }, h("span", null, t("choose_file")), file), text);
-  const instBox = h("div", null, h("label", { class: "field", style: "margin:0" }, h("span", null, t("instance")), srcSelect));
-  const modes = h("div", { class: "seg" });
-  const setMode = (mode) => {
-    m.mode = mode;
-    fileBox.hidden = mode !== "file";
-    instBox.hidden = mode !== "instance";
-    trashBox.hidden = mode !== "trash";
-    modes.replaceChildren(
-      h("button", { class: mode === "file" ? "active" : "", onclick: () => setMode("file") }, t("src_file")),
-      h("button", { class: mode === "instance" ? "active" : "", onclick: () => setMode("instance") }, t("src_instance")),
-      h("button", { class: mode === "trash" ? "active" : "", onclick: () => setMode("trash") }, t("src_trash")));
-  };
-  setMode(m.mode);
 
-  const overwrite = h("input", { type: "checkbox", checked: m.overwrite, onchange: (e) => { m.overwrite = e.target.checked; if (m.bundle) analyse.click(); } });
-  const analyse = toolBtn("search", t("analyse"), (ev) => busy(ev.currentTarget, t("analysing"), async () => {
-    m.targetId = target.value;
-    let bundle;
-    if (m.mode === "instance") {
-      m.srcId = srcSelect.value;
-      if (!m.srcId) throw new Error(t("need_source"));
-      if (m.srcId === m.targetId) throw new Error(t("same_instance"));
-      bundle = await api(`/api/instances/${m.srcId}/export`);
-    } else if (m.mode === "trash") {
-      if (!m.trash.profileId) throw new Error(t("need_profile"));
-      bundle = await api(`/api/trash/${m.trash.app}/build`, { method: "POST", body: { profile_id: m.trash.profileId, formats: [...m.trash.selected] } });
-    } else {
-      if (!m.text.trim()) throw new Error(t("need_source"));
-      bundle = await api("/api/import/parse", { method: "POST", body: { text: m.text, app: targetApp } });
-    }
-    m.bundle = bundle;
-    m.plan = await api(`/api/instances/${m.targetId}/import/preview`, { method: "POST", body: { bundle, overwrite: m.overwrite } });
-    m.sel = {};
-    for (const [s, items] of Object.entries(m.plan.sections)) {
-      m.sel[s] = new Set(items.filter((i) => (i.action === "create" || i.action === "update") && !NOT_BY_DEFAULT.includes(s)).map((i) => i.name));
-    }
-    showPlan();
-  }), { primary: true });
-  tools.set([analyse, apply]);
-
-  const showPlan = () => {
-    const sum = m.plan.summary;
-    out.replaceChildren(
-      (m.bundle.warnings ?? []).map((w) => h("div", { class: "warn", style: "margin:0 0 6px" }, `⚠ ${w}`)),
-      h("div", { class: "summary" },
-        ["create", "update", "unchanged", "skip"].map((k) => h("span", { class: `badge b-${k}` }, `${sum[k]} ${t(`a_${k}`)}`))),
-      selectionTree(planRows(m.plan), m.sel, { bundle: m.bundle, onChange: updateApply }));
-    updateApply();
-  };
-
-  const node = h("div", null, h("h2", null, t("tab_import")), h("p", { class: "hint" }, t("imp_hint")),
-    h("div", { class: "card" }, h("h3", null, `1. ${t("source")}`), modes, fileBox, instBox, trashBox),
-    h("div", { class: "card" }, h("h3", null, `2. ${t("target")}`), h("div", { class: "row" }, h("div", { class: "grow" }, target)),
-      h("label", { class: "row", style: "margin-top:14px;flex-wrap:nowrap;align-items:flex-start" }, overwrite, h("span", { class: "grow" }, t("overwrite"))), h("div", { class: "hint", style: "margin:6px 0 0" }, t("overwrite_hint"))),
-    out);
-  if (m.plan) showPlan();
-  return node;
+  showList();
+  chrome();
+  return h("div", null, h("h2", null, t("tab_import")),
+    h("div", { class: "card" },
+      h("div", { class: "flow" },
+        h("div", null, h("div", { class: "hint", style: "margin:0" }, t("rev_from")), h("strong", { class: "name" }, m.sourceLabel)),
+        h("span", { class: "arrow" }, "→"),
+        h("div", null, h("div", { class: "hint", style: "margin:0" }, t("rev_to")),
+          h("span", { class: "end" }, h("strong", { class: "name" }, target.name), h("span", { class: `badge b-${target.app}` }, cap(target.app)))),
+        h("div", { class: "grow" }), h("button", { onclick: back }, t("rev_change"))),
+      h("label", { class: "row", style: "margin-top:14px;flex-wrap:nowrap;align-items:flex-start" }, overwrite, h("span", { class: "grow" }, t("overwrite"))),
+      h("div", { class: "hint", style: "margin:6px 0 0" }, t("overwrite_hint"))),
+    listBox);
 }
 
 const scoreBadge = (n) => h("span", { class: `badge ${n > 0 ? "b-create" : n < 0 ? "b-error" : ""}` }, n > 0 ? `+${n}` : String(n));
 
 // Source "TRaSH Guides": pick one of the guides' quality profiles and which optional formats to bring along.
-function trashPanel(m, app) {
+function trashPanel(m, app, onChange = () => {}) {
   const T = m.trash;
   const box = h("div");
   if (app !== "radarr" && app !== "sonarr") {
@@ -618,17 +786,17 @@ function trashPanel(m, app) {
 
   const draw = () => {
     if (T.error) {
-      box.replaceChildren(h("p", { class: "err", style: "margin:0 0 10px" }, T.error), h("button", { onclick: () => load() }, t("retry")));
+      fill(box, h("p", { class: "err", style: "margin:0 0 10px" }, T.error), h("button", { onclick: () => load() }, t("retry")));
       return;
     }
-    if (!T.profiles) { box.replaceChildren(h("p", { class: "hint", style: "margin:0" }, t("trash_loading"))); return; }
+    if (!T.profiles) { fill(box, h("p", { class: "hint", style: "margin:0" }, t("trash_loading"))); return; }
     const sel = h("select", { onchange: (e) => pick(e.target.value) }, h("option", { value: "" }, t("trash_pick")));
     for (const cat of [...new Set(T.profiles.map((p) => p.category))]) {
       sel.append(h("optgroup", { label: cat }, T.profiles.filter((p) => p.category === cat).map((p) => h("option", { value: p.id }, p.name))));
     }
     sel.value = T.profileId;
     const d = T.detail;
-    box.replaceChildren(
+    fill(box, 
       h("label", { class: "field" }, h("span", null, t("trash_profile")), sel),
       h("div", { class: "row", style: "margin-bottom:12px" },
         h("span", { class: "hint grow", style: "margin:0" }, t("trash_updated", new Date(T.fetchedAt * 1000).toLocaleString())),
@@ -640,6 +808,7 @@ function trashPanel(m, app) {
           h("ul", null, d.required.map((f) => formatRow(f, true)))) : null,
         d.groups.length ? h("h3", { style: "margin:14px 0 8px" }, t("trash_groups")) : null,
         d.groups.map(groupBlock)) : null);
+    onChange(); // the caller's "can I continue?" depends on the chosen profile
   };
   if (!T.profiles) load();
   draw();
@@ -649,13 +818,20 @@ function trashPanel(m, app) {
 function importResult() {
   const m = S.imp;
   const r = m.result;
-  tools.set([toolBtn("plus", t("new_import"), () => { S.imp = { ...m, bundle: null, plan: null, sel: {}, result: null }; render(); }, { primary: true })]);
+  const target = S.instances.find((i) => i.id === m.targetId);
+  tools.set([stepper(impSteps(), 4)]); // all three steps done
   const ok = Object.values(r.sections).flat().filter((i) => i.status === "ok").length;
+  bar.set(t("done_text", ok, target.name), actionBtn(t("new_import"), () => {
+    S.imp = { ...m, step: 1, bundle: null, plan: null, sel: {}, result: null, sourceLabel: "", text: "", fileName: "" };
+    render();
+  }, { primary: true, iconName: "plus" }));
   return h("div", null, h("h2", null, t("done")),
     h("div", { class: "summary" },
       h("span", { class: "badge b-ok" }, `${ok} ${t("s_ok")}`),
       r.summary.error ? h("span", { class: "badge b-error" }, `${r.summary.error} ${t("s_error")}`) : null),
-    r.backup ? h("p", { class: "hint" }, `${t("backup_saved")} `, h("a", { href: `/api/backups/${encodeURIComponent(r.backup)}` }, r.backup)) : null,
+    r.backup ? h("div", { class: "card note" },
+      h("div", null, `${t("backup_saved")} `, h("a", { href: `/api/backups/${encodeURIComponent(r.backup)}` }, r.backup)),
+      h("div", { class: "hint", style: "margin:6px 0 0" }, t("done_undo"))) : null,
     selectionTree(Object.fromEntries(Object.entries(r.sections).map(([s, items]) => [s,
       items.filter((i) => i.status).map((i) => ({ ...i, action: null, selectable: false }))])), {}, { readonly: true }));
 }

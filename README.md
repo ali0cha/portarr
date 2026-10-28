@@ -144,11 +144,21 @@ Onglet **Instances** → *Ajouter*. Utilisez l'adresse que le conteneur peut att
 
 ## Utilisation
 
-- **Appliquer un profil TRaSH** : onglet **Import** → choisissez l'instance cible (Radarr ou Sonarr) → source *TRaSH Guides* → choisissez le profil, ajustez les groupes de formats → **Analyser** → **Appliquer**.
-- **Coller un JSON TRaSH** : le JSON d'un format personnalisé ou d'un profil de qualité, copié depuis le dépôt ou le site des guides → source *Fichier / JSON collé* → **Analyser** → **Appliquer**.
-- **Copier une configuration d'une instance à une autre** : onglet **Import** → *Une autre instance* → source + cible → **Analyser**. Cocher un profil coche aussi ce dont il dépend (formats notés, profil de synchronisation d'un indexeur).
-- **Archiver / partager** : onglet **Export** → choisir l'instance → **Charger** → cocher → **Télécharger**.
-- **Revenir en arrière** : onglet **Sauvegardes**, puis réimportez le fichier voulu avec « écraser » activé (les éléments créés entre-temps ne sont pas supprimés).
+Chaque écran suit un parcours en étapes (l'indicateur est en haut) et **toutes les actions sont dans la barre du bas**, toujours visible : on avance, on ne remonte jamais.
+
+**Exporter une configuration** (pour la réutiliser vous-même ou l'envoyer à quelqu'un)
+
+1. Onglet **Export** : choisissez l'instance, sa configuration se charge toute seule.
+2. Décochez ce que vous ne voulez pas inclure. Cocher un profil coche aussi ce dont il dépend.
+3. **Télécharger le fichier**. Il ne contient ni clé API ni mot de passe : vous pouvez le garder comme sauvegarde, le réimporter sur une autre de vos instances, ou l'envoyer.
+
+**Importer une configuration**
+
+1. **Choisir** : l'instance à configurer, puis d'où vient la configuration : *un fichier ou du JSON collé* (un export Portarr, un format personnalisé ou un profil TRaSH), *une autre instance* de la même application, ou les *TRaSH Guides* (Radarr et Sonarr). Puis **Vérifier les changements**.
+2. **Vérifier** : la liste de ce qui sera créé, modifié ou ignoré, champ par champ. Décochez ce que vous ne voulez pas, puis **Appliquer**. « Modifier » ou l'étape 1 de l'indicateur ramènent aux réglages sans rien perdre.
+3. **Terminé** : le résumé, et le lien vers la sauvegarde de la cible faite juste avant d'écrire.
+
+**Revenir en arrière** : onglet **Sauvegardes**, puis réimportez le fichier voulu (*Import → Un fichier*) avec « écraser » activé. Les éléments créés entre-temps ne sont pas supprimés.
 
 « Écraser les éléments existants » concerne les éléments appariés par nom : formats personnalisés, profils de qualité, profils de synchronisation, indexeurs, proxys. Les tailles, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.
 
