@@ -53,7 +53,7 @@ Les instances ci-dessous sont simulées : aucune donnée réelle n'est affichée
 
 ## Installation
 
-Portarr tourne dans un seul conteneur, sans base de données. Tout ce qu'il retient (vos instances, les sauvegardes, le cache TRaSH) est dans le volume `/config`, qui **doit être inscriptible par l'utilisateur `568:568`**.
+Portarr tourne dans un seul conteneur, sans base de données. Tout ce qu'il retient (vos instances, les sauvegardes, le cache TRaSH) est dans le volume `/config`. Le conteneur tourne par défaut sous l'utilisateur `568:568` (l'utilisateur `apps` de TrueNAS) : `/config` doit donc être inscriptible par lui, ou par l'utilisateur sous lequel vous [lancez le conteneur](#réglages-utiles).
 
 L'image est construite et publiée automatiquement par les GitHub Actions de ce dépôt : `ghcr.io/ali0cha/portarr:latest` (amd64 et arm64).
 
@@ -73,14 +73,15 @@ L'image est construite en local, sans registre. Ouvrez <http://localhost:8765>.
 docker run -d --name portarr --restart unless-stopped -p 8765:8765 -v portarr-config:/config ghcr.io/ali0cha/portarr:latest
 ```
 
-Un volume nommé fonctionne sans changer aucun droit. Avec un dossier de l'hôte (`-v /chemin/config:/config`), faites d'abord `sudo chown 568:568 /chemin/config`.
+Un volume nommé fonctionne sans changer aucun droit. Avec un dossier de l'hôte (`-v /chemin/config:/config`), donnez-le d'abord à l'utilisateur du conteneur : `sudo chown 568:568 /chemin/config`.
 
-Réglages utiles :
+### Réglages utiles
 
 - **Authentification** : ajoutez `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (ou les mêmes clés sous `environment:` dans `docker-compose.yml`). Recommandé sauf si le port est réservé à un réseau de confiance.
 - **Port** : changez le premier nombre de `-p 8765:8765` (ou de `ports:` dans le compose).
 - **Joindre vos instances** : utilisez une adresse que le conteneur peut atteindre, soit l'IP de l'hôte et le port de l'application (`http://192.168.1.10:7878`), soit, sur un réseau Docker commun, le nom du conteneur (`http://radarr:7878`). `localhost` désigne le conteneur Portarr lui-même.
-- **Droits** : si l'ajout d'une instance échoue avec une erreur HTTP 500 et `Permission denied: '/config/…'` dans le journal, le dossier n'est pas inscriptible par l'uid 568. Corrigez son propriétaire ou son ACL.
+- **Utilisateur** : `568:568` ne convient qu'à TrueNAS. Pour coller à votre système, lancez le conteneur sous un autre utilisateur (`--user 99:100` sur Unraid, `--user 1000:1000` sur la plupart des Linux, ou `user:` dans le compose) et donnez `/config` à cet utilisateur. Portarr n'écrit que dans `/config` et se moque de l'utilisateur utilisé.
+- **Droits** : si l'ajout d'une instance échoue avec une erreur HTTP 500 et `Permission denied: '/config/…'` dans le journal, le dossier n'est pas inscriptible par l'utilisateur du conteneur (le journal donne son uid). Corrigez le propriétaire ou l'ACL du dossier.
 
 ### Ajouter vos instances
 

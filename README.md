@@ -53,7 +53,7 @@ The instances below are simulated, so no real data is shown.
 
 ## Install
 
-Portarr runs as a single container with no database. Everything it remembers (your instances, the backups, the TRaSH cache) lives in the `/config` volume, which **must be writable by user `568:568`**.
+Portarr runs as a single container with no database. Everything it remembers (your instances, the backups, the TRaSH cache) lives in the `/config` volume. The container runs as user `568:568` by default (the `apps` user of TrueNAS), so `/config` must be writable by that user, or by whichever user you [run the container as](#useful-settings).
 
 The image is built and published automatically by this repository's GitHub Actions: `ghcr.io/ali0cha/portarr:latest` (amd64 and arm64).
 
@@ -73,14 +73,15 @@ This builds the image locally, with no registry. Open <http://localhost:8765>.
 docker run -d --name portarr --restart unless-stopped -p 8765:8765 -v portarr-config:/config ghcr.io/ali0cha/portarr:latest
 ```
 
-A named volume works without any permission change. With a host folder (`-v /path/config:/config`), run `sudo chown 568:568 /path/config` first.
+A named volume works without any permission change. With a host folder (`-v /path/config:/config`), give it to the container's user first: `sudo chown 568:568 /path/config`.
 
-Useful settings:
+### Useful settings
 
 - **Authentication**: add `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (or the same keys under `environment:` in `docker-compose.yml`). Recommended unless the port is limited to a trusted network.
 - **Port**: change the first number of `-p 8765:8765` (or of `ports:` in the compose file).
 - **Reaching your instances**: use an address the container can reach, either the host's IP and the application's port (`http://192.168.1.10:7878`) or, on a shared Docker network, the container name (`http://radarr:7878`). `localhost` is the Portarr container itself.
-- **Permissions**: if adding an instance fails with an HTTP 500 and `Permission denied: '/config/…'` in the log, the folder is not writable by uid 568. Fix its owner or ACL.
+- **User**: `568:568` suits TrueNAS only. To match your system, run the container as another user (`--user 99:100` on Unraid, `--user 1000:1000` on most Linux machines, or `user:` in the compose file) and give `/config` to that user. Portarr only writes to `/config` and does not care which user it is.
+- **Permissions**: if adding an instance fails with an HTTP 500 and `Permission denied: '/config/…'` in the log, the folder is not writable by the user the container runs as (the log gives its uid). Fix the folder's owner or ACL.
 
 ### Adding your instances
 

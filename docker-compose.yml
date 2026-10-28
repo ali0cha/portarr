@@ -5,7 +5,7 @@ services:
     image: ghcr.io/ali0cha/portarr:latest
     container_name: portarr
     restart: unless-stopped
-    user: "568:568"
+    user: "568:568"   # the TrueNAS "apps" user; use your own (e.g. "1000:1000", "99:100" on Unraid) and give ./config to it
     ports:
       - "8765:8765"
     environment:
@@ -14,4 +14,4 @@ services:
       AUTH_USER: ""
       AUTH_PASSWORD: ""
     volumes:
-      - ./config:/config   # must be writable by uid 568 (chown 568:568 ./config)
+      - ./config:/config   # must be writable by the user above (chown 568:568 ./config)
