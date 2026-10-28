@@ -7,4 +7,5 @@ __pycache__
 *.pyc
 config
 README.md
+README.fr.md
 run_tests.sh

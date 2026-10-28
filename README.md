@@ -2,196 +2,178 @@
 
 # Portarr
 
-**Français** · [English](README.en.md)
+**English** · [Français](README.fr.md)
 
-Petit outil web pour **exporter et importer la configuration de Radarr, Sonarr, Lidarr, Whisparr et Prowlarr** : formats personnalisés, profils de qualité, tailles par qualité, nommage, profils de métadonnées (Lidarr), et côté Prowlarr les profils de synchronisation, indexeurs et proxys d'indexeurs. Pensé pour appliquer les [guides TRaSH](https://trash-guides.info/Radarr/) ou répliquer une configuration d'une instance à une autre, sans tout refaire à la main.
+Portarr is a small web tool that **exports and imports the quality configuration of Radarr, Sonarr, Lidarr, Whisparr and Prowlarr**. Use it to apply the [TRaSH Guides](https://trash-guides.info/), copy a setup from one instance to another, or back up and share a configuration, without redoing it by hand.
 
-## Ce que ça fait
+## Features
 
-| Application | Élément | Remarque |
-|---|---|---|
-| Radarr, Sonarr, Lidarr, Whisparr | Formats personnalisés | Import direct des JSON de TRaSH-Guides (un objet ou une liste) |
-| Radarr, Sonarr, Lidarr, Whisparr | Profils de qualité | Scores, groupes de qualités, cutoff, langue (Radarr, Whisparr v3), tailles propres à chaque qualité d'un profil (Whisparr v2, hors groupes) |
-| Lidarr | Profils de métadonnées | Types d'albums (principaux et secondaires) et statuts de sortie autorisés |
-| Radarr, Sonarr, Lidarr, Whisparr | Tailles par qualité | min / préféré / max |
-| Radarr, Sonarr, Lidarr, Whisparr | Nommage | |
-| Radarr, Sonarr, Lidarr, Whisparr | Gestion des médias | Décoché par défaut ; les réglages propres à l'hôte (corbeille, permissions) sont exclus |
-| Radarr, Sonarr | Profils [TRaSH Guides](https://trash-guides.info/) | Choisis dans le catalogue ou collés en JSON : formats obligatoires, groupes optionnels, scores du jeu de scores du profil (voir plus bas) |
-| Prowlarr | Profils de synchronisation | |
-| Prowlarr | Indexeurs | Priorité, profil, tags, réglages. **Sans les secrets** (voir ci-dessous) |
-| Prowlarr | Proxys d'indexeurs | FlareSolverr, etc. Sans les secrets |
+| Application | What you can export and import |
+|---|---|
+| Radarr, Sonarr, Lidarr, Whisparr | Custom formats, quality profiles (scores, groups, cutoff, language), quality sizes, naming, media management |
+| Radarr, Sonarr | [TRaSH Guides](https://trash-guides.info/) profiles, picked from the catalogue or pasted as JSON |
+| Lidarr | Metadata profiles (album types and release statuses) |
+| Prowlarr | Sync profiles, indexers, indexer proxies |
 
-Points clés :
+- **Names, not IDs.** Formats, qualities, tags and profiles are referenced by name, so an export from one instance imports into another where the IDs differ.
+- **Preview first.** Every import lists what will be created, updated or skipped, field by field. You untick what you don't want.
+- **Automatic backup** of the target, saved right before anything is written. If the backup fails, nothing is changed.
+- **Never deletes** anything on the target.
+- **Safe to share.** Exports contain no API key or password, and your instances' keys never leave the server.
+- **Same application to same application** only: an export from Sonarr is refused on Radarr.
+- English and French interface (switch in the header), light and dark theme, and the application type is detected when you add an instance.
 
-- **Indépendant des identifiants.** Tout est référencé par *nom* (formats dans les scores, qualités, cutoff, tags, profils de synchronisation). Un export d'une instance s'importe sur une autre où les IDs sont différents. Les tags manquants sont créés sur la cible.
-- **Aperçu obligatoire.** Chaque import affiche d'abord ce qui sera créé / modifié / ignoré, avec le détail champ par champ, et vous décochez ce que vous ne voulez pas.
-- **Sauvegarde automatique.** L'état de la cible est enregistré dans `/config/backups` juste avant toute écriture. Si la sauvegarde échoue, rien n'est modifié.
-- **Rien n'est jamais supprimé** sur la cible.
-- **Une application vers la même application** uniquement (Sonarr → Sonarr, Lidarr → Lidarr…) : un export est refusé sur une autre application.
-- Les clés API de vos instances restent côté serveur et ne sont jamais renvoyées au navigateur.
+Works with Radarr v4+/v5+, Sonarr v4+, Whisparr v2 and v3 "Eros" (API v3), Lidarr and Prowlarr (API v1).
 
-Compatible Radarr v4+/v5+, Sonarr v4+ et Whisparr v2 / v3 « Eros » (API v3), Lidarr et Prowlarr (API v1). Le type d'application est détecté automatiquement à l'ajout d'une instance. Interface **en français et en anglais** : la langue du navigateur est utilisée par défaut, et le sélecteur **FR | EN** de l'en-tête permet de changer à tout moment (le choix est mémorisé, et rien n'est perdu en pleine étape). Thème clair / sombre / automatique. Seuls les messages renvoyés par les serveurs (avertissements de l'aperçu) restent en anglais.
+> Lidarr and Prowlarr were validated against simulations of their official OpenAPI specifications, and Whisparr against one based on its source code (it publishes no specification). None has been tried on a real instance yet. Always read the preview; the automatic backup covers the rest.
 
-### Les secrets des indexeurs
+Notes: media management is unticked by default, and host-specific settings (recycle bin, permissions) are never exported. Whisparr v2's per-quality size limits inside a profile are kept, except for qualities inside a group.
 
-Prowlarr masque les clés API, mots de passe et noms d'utilisateur dans son API : ils **ne peuvent pas être exportés**, et Portarr ne les met jamais dans un fichier (le fichier peut donc être partagé sans risque). Conséquences à l'import :
+## Install
 
-- un indexeur **nouveau** qui en a besoin est créé **désactivé** (sans test de connexion, qui échouerait) : renseignez ses secrets sur la cible puis activez-le ;
-- un indexeur **existant** conserve ses secrets, et son état activé / désactivé n'est pas modifié s'il en a ;
-- les indexeurs publics, sans secret, sont créés normalement.
+Portarr runs as a single container with no database. Everything it remembers (your instances, the backups, the TRaSH cache) lives in the `/config` volume, which **must be writable by user `568:568`**.
 
-Les *Applications* (liens Prowlarr → Radarr/Sonarr, qui contiennent des clés API) et les clients de téléchargement ne sont volontairement pas gérés : ils dépendent de votre environnement.
+The image is built and published automatically by this repository's GitHub Actions: `ghcr.io/ali0cha/portarr:latest` (amd64 and arm64).
 
-> Lidarr et Prowlarr ont été validés contre une simulation fidèle à leur spécification OpenAPI officielle, Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification) ; aucun n'a encore été essayé sur une vraie instance. Utilisez toujours l'aperçu d'abord, la sauvegarde automatique couvre le reste.
-
-## Profils TRaSH Guides
-
-Un fichier de profil TRaSH ne contient que des *références* : ses formats obligatoires sont cités par nom, et leurs scores se trouvent dans le fichier de chaque format, selon le « jeu de scores » du profil. Portarr s'occupe de tout résoudre :
-
-1. il télécharge **une seule fois** l'archive du [dépôt des guides](https://github.com/TRaSH-Guides/Guides) (environ 25 Mo, dont il ne garde que 1,2 Mo de JSON) et la garde en cache 12 h dans `/config/cache` ;
-2. pour le profil choisi, il rassemble les formats **imposés** et les **groupes optionnels** qui s'y appliquent, avec le score de chacun ; les groupes et formats recommandés par les guides sont cochés d'office ;
-3. il produit un fichier Portarr complet (le profil, ses scores, la définition des formats), qui passe ensuite par le même aperçu et la même sauvegarde automatique que tout import.
-
-Les qualités s'importent dans l'ordre des guides (de la plus haute à la plus basse), et celles que le guide ne mentionne pas sont ajoutées en bas, désactivées.
-
-À savoir :
-
-- **Il faut un accès Internet** la première fois (et pour « Mettre à jour les guides »). Hors ligne, la copie en cache est utilisée même périmée ; sans cache, un message l'explique. Coller des formats personnalisés reste possible sans Internet.
-- **Seulement Radarr et Sonarr** : les guides ne couvrent pas les autres applications.
-- Les tailles par qualité et le nommage des guides ne sont pas encore importés, et le fichier de *conflits* entre formats n'est pas appliqué : lisez la description des groupes (par exemple, ne scorez qu'un seul des deux formats x265).
-- La source du catalogue se change avec `TRASH_GUIDES_URL` (utile pour une copie locale ou un miroir).
-
-## Installation avec Docker
-
-Portarr tourne dans un seul conteneur, sans base de données : tout ce qu'il retient (vos instances et les sauvegardes) tient dans le volume `/config`. Le conteneur s'exécute avec l'utilisateur **568:568** (celui de TrueNAS), donc ce volume doit être inscriptible par lui.
-
-### Avec Docker Compose (le plus simple)
+### Docker Compose
 
 ```bash
-git clone https://github.com/ali0cha/portarr.git
-```
-
-```bash
-cd portarr && mkdir -p config && sudo chown 568:568 config
-```
-
-```bash
+git clone https://github.com/ali0cha/portarr.git && cd portarr
+mkdir -p config && sudo chown 568:568 config
 docker compose up -d --build
 ```
 
-L'image est construite localement, sans registre. Ouvrez ensuite `http://localhost:8765`. Pour mettre à jour : `git pull`, puis relancez la dernière commande.
+This builds the image locally, with no registry. Open <http://localhost:8765>.
 
-### Avec `docker run`
+### docker run
 
 ```bash
 docker run -d --name portarr --restart unless-stopped -p 8765:8765 -v portarr-config:/config ghcr.io/ali0cha/portarr:latest
 ```
 
-Un volume nommé comme `portarr-config` convient sans réglage de droits. Avec un dossier de l'hôte (`-v /chemin/config:/config`), faites d'abord `sudo chown 568:568 /chemin/config`. Pour mettre à jour : `docker pull ghcr.io/ali0cha/portarr:latest`, puis supprimez et recréez le conteneur (le volume est conservé).
+A named volume works without any permission change. With a host folder (`-v /path/config:/config`), run `sudo chown 568:568 /path/config` first.
 
-### Réglages utiles
+Useful settings:
 
-- **Authentification** : ajoutez `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (ou les mêmes clés sous `environment:` dans `docker-compose.yml`). Recommandé dès que le port n'est pas réservé à un réseau de confiance.
-- **Port** : changez le premier nombre de `-p 8765:8765` (ou de `ports:` dans le compose).
-- **Joindre vos instances** : indiquez une adresse que le conteneur peut atteindre, soit l'IP de l'hôte et le port de l'application (`http://192.168.1.10:7878`), soit, si Portarr et vos applications partagent un même réseau Docker, le nom du conteneur (`http://radarr:7878`). `localhost` désigne le conteneur Portarr lui-même, pas votre machine.
-- **Santé** : le conteneur déclare un healthcheck (`docker ps` affiche `healthy`).
+- **Authentication**: add `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (or the same keys under `environment:` in `docker-compose.yml`). Recommended unless the port is limited to a trusted network.
+- **Port**: change the first number of `-p 8765:8765` (or of `ports:` in the compose file).
+- **Reaching your instances**: use an address the container can reach, either the host's IP and the application's port (`http://192.168.1.10:7878`) or, on a shared Docker network, the container name (`http://radarr:7878`). `localhost` is the Portarr container itself.
 
-## Installation sur TrueNAS SCALE (24.10 ou plus récent)
+### TrueNAS SCALE (24.10 or newer)
 
-### 1. Obtenir l'image Docker
+1. **Create the storage.** *Datasets* → your pool → *Add Dataset*, named `portarr`. Then *Permissions* → *Edit*: user `apps`, group `apps`, tick *Apply User* and *Apply Group*, save. If the ACL editor opens instead, give `apps` full control.
+2. **Install the app.** *Apps → Discover Apps → ⋮ → Install via YAML*, then paste [`deploy/truenas-app.yaml`](deploy/truenas-app.yaml) and adjust the port and the dataset path:
 
-TrueNAS tire l'image depuis un registre. Le plus simple : GitHub construit et publie l'image pour vous (cette même image sert pour `docker run` ci-dessus).
+   ```yaml
+   services:
+     portarr:
+       image: ghcr.io/ali0cha/portarr:latest
+       restart: unless-stopped
+       pull_policy: always     # re-downloads the image each time the app is saved
+       user: "568:568"
+       ports:
+         - "30290:8765"          # a free port, 9000 or above
+       environment:
+         TZ: Europe/Brussels
+         AUTH_USER: admin        # optional but recommended
+         AUTH_PASSWORD: change-me
+       volumes:
+         - /mnt/YOUR_POOL/portarr:/config
+   ```
 
-1. Créez un dépôt GitHub et poussez ce dossier sur la branche `main`.
-2. L'onglet **Actions** lance `build` : tests, puis publication de `ghcr.io/<votre-utilisateur>/portarr:latest` (amd64 et arm64).
-3. Sur GitHub : profil → **Packages** → `portarr` → *Package settings* → visibilité **Public** (sinon TrueNAS devra s'authentifier pour tirer l'image).
+3. **Open** `http://<truenas-ip>:30290`, then add your instances.
 
-### 2. Créer le dossier de configuration
+If adding an instance fails with an HTTP 500 and `Permission denied: '/config/…'` in the app's log, the folder is not writable by uid 568: fix its owner or ACL.
 
-Portarr tourne sous l'utilisateur **`apps` (uid 568)** et doit pouvoir écrire dans `/config`, sinon l'ajout d'une instance échoue (erreur 500, `PermissionError: … /config/instances.tmp` dans le journal).
+### Adding your instances
 
-1. **Datasets** → choisissez votre pool → **Add Dataset**, nom `portarr` (réglages par défaut).
-2. Sélectionnez ce dataset → carte **Permissions** → **Edit** : utilisateur `apps`, groupe `apps`, cochez *Apply User* et *Apply Group*, puis enregistrez. Si l'éditeur d'ACL s'ouvre à la place, donnez à `apps` le contrôle total.
-3. Dans l'application, *Storage* → **Host Path** : chemin `/mnt/<pool>/portarr`, monté sur `/config`.
+*Instances* → *Add instance*. Give the address the container can reach and the API key from *Settings → General → Security*. If you use a URL Base, include it (`http://192.168.1.10:7878/radarr`).
 
-### 3. Installer l'application
-
-**Apps → Discover Apps → ⋮ (en haut à droite) → Install via YAML**, puis collez [`deploy/truenas-app.yaml`](deploy/truenas-app.yaml) en adaptant :
-
-```yaml
-services:
-  portarr:
-    image: ghcr.io/ali0cha/portarr:latest
-    restart: unless-stopped
-    pull_policy: always     # retélécharge l'image à chaque enregistrement : les mises à jour tiennent en un clic
-    user: "568:568"
-    ports:
-      - "30290:8765"          # port libre ≥ 9000
-    environment:
-      TZ: Europe/Brussels
-      AUTH_USER: admin        # optionnel mais recommandé
-      AUTH_PASSWORD: change-me
-    volumes:
-      - /mnt/VOTRE_POOL/portarr:/config
-```
-
-Ouvrez ensuite `http://<ip-truenas>:30290`.
-
-> Sans dépôt GitHub : `docker build -t portarr:local .` depuis le shell TrueNAS puis `image: portarr:local` dans le YAML. Cette voie n'a pas été testée sur TrueNAS.
-
-### 4. Ajouter vos instances
-
-Onglet **Instances** → *Ajouter*. Utilisez l'adresse que le conteneur peut atteindre, typiquement `http://<ip-truenas>:<port de l'app>` (par défaut 30025 pour Radarr, 30027 pour Sonarr sur TrueNAS ; les ports par défaut hors TrueNAS sont 8686 pour Lidarr, 6969 pour Whisparr, 9696 pour Prowlarr), et la clé API de *Paramètres → Général → Sécurité*. Si vous utilisez une « URL Base », ajoutez-la (`http://…:7878/radarr`).
-
-### Mettre à jour Portarr sur TrueNAS
-
-1. Sur GitHub, onglet **Actions** du dépôt : la dernière construction doit être **verte**. C'est elle qui publie la nouvelle image ; si elle est rouge, l'image `latest` est restée l'ancienne.
-2. Dans TrueNAS : **Apps → portarr → Edit**, vérifiez que `pull_policy: always` figure dans le YAML (ajoutez-la sinon), puis **Save**. TrueNAS retélécharge l'image et recrée le conteneur.
-3. Vos instances et vos sauvegardes sont dans `/config` : elles sont conservées.
-4. Pour vérifier que la nouvelle image tourne, regardez le bas de la barre latérale : la **version** (`Portarr v0.1.0`) et le **commit** dont l'image a été construite (`build 7fb74a0`). Comparez ce commit au dernier de GitHub. Une image construite à la main affiche `build dev`.
-
-Si l'image ne semble pas changer, tirez-la à la main depuis le shell du NAS puis refaites **Edit → Save** :
-
-```bash
-sudo docker pull ghcr.io/ali0cha/portarr:latest
-```
-
-## Utilisation
-
-Chaque écran suit un parcours en étapes (l'indicateur est en haut) et **toutes les actions sont dans la barre du bas**, toujours visible : on avance, on ne remonte jamais.
-
-**Exporter une configuration** (pour la réutiliser vous-même ou l'envoyer à quelqu'un)
-
-1. Onglet **Export** : choisissez l'instance, sa configuration se charge toute seule.
-2. Décochez ce que vous ne voulez pas inclure. Cocher un profil coche aussi ce dont il dépend.
-3. **Télécharger le fichier**. Il ne contient ni clé API ni mot de passe : vous pouvez le garder comme sauvegarde, le réimporter sur une autre de vos instances, ou l'envoyer.
-
-**Importer une configuration**
-
-1. **Choisir** : l'instance à configurer, puis d'où vient la configuration : *un fichier ou du JSON collé* (un export Portarr, un format personnalisé ou un profil TRaSH), *une autre instance* de la même application, ou les *TRaSH Guides* (Radarr et Sonarr). Puis **Vérifier les changements**.
-2. **Vérifier** : la liste de ce qui sera créé, modifié ou ignoré, champ par champ. Décochez ce que vous ne voulez pas, puis **Appliquer**. « Modifier » ou l'étape 1 de l'indicateur ramènent aux réglages sans rien perdre.
-3. **Terminé** : le résumé, et le lien vers la sauvegarde de la cible faite juste avant d'écrire.
-
-**Revenir en arrière** : onglet **Sauvegardes**, puis réimportez le fichier voulu (*Import → Un fichier*) avec « écraser » activé. Les éléments créés entre-temps ne sont pas supprimés.
-
-« Écraser les éléments existants » concerne les éléments appariés par nom : formats personnalisés, profils de qualité, profils de synchronisation, indexeurs, proxys. Les tailles, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.
-
-## Sécurité
-
-L'outil détient les clés API de vos instances. Gardez-le sur votre réseau local et définissez `AUTH_USER` / `AUTH_PASSWORD` (authentification HTTP basique) dès que le port est accessible depuis autre chose qu'un réseau de confiance ; ne l'exposez pas directement sur Internet (placez-le derrière un reverse proxy HTTPS si besoin). `/healthz` reste public.
-
-## Variables d'environnement
-
-| Variable | Défaut | Rôle |
+| Application | Default port | On TrueNAS |
 |---|---|---|
-| `PORT` | `8765` | Port d'écoute dans le conteneur |
-| `CONFIG_DIR` | `/config` | Instances (`instances.json`, mode 600), `backups/` et `cache/` (copie des TRaSH Guides) |
-| `TRASH_GUIDES_URL` | archive GitHub du dépôt TRaSH | Adresse de l'archive `.tar.gz` des guides |
-| `AUTH_USER`, `AUTH_PASSWORD` | vides | Active l'authentification si les deux sont définies |
+| Radarr | 7878 | 30025 |
+| Sonarr | 8989 | 30027 |
+| Lidarr | 8686 | |
+| Whisparr | 6969 | |
+| Prowlarr | 9696 | |
 
-## Format du fichier d'export
+## Using Portarr
 
-JSON lisible, versionné (`"format": "portarr"`, `"version": 1`). Les profils référencent les formats et qualités par nom :
+Every task is a step-by-step path (the indicator is at the top), and **all actions are in the bottom bar**, so you only move forward.
+
+**Export a configuration**, to reuse it yourself or send it to someone:
+
+1. Open **Export** and pick the instance. Its configuration loads by itself.
+2. Untick what you don't want. Ticking a profile also ticks what it depends on.
+3. **Download the file.** Keep it as a backup, re-import it on another of your instances, or send it.
+
+**Import a configuration**:
+
+1. **Choose** the instance to configure, then where the configuration comes from: *a file or pasted JSON* (a Portarr export, a TRaSH custom format or profile), *another instance* of the same application, or the *TRaSH Guides* (Radarr and Sonarr). Click **Review changes**.
+2. **Review** the list of what will be created, updated or skipped. Untick what you don't want, then **Apply**. *Change* (or step 1 of the indicator) goes back without losing anything.
+3. **Done**: the summary and the link to the backup of the target.
+
+**Roll back**: open **Backups**, then re-import the file you want (*Import → A file*) with *overwrite* ticked. Items created in the meantime are not deleted.
+
+*Overwrite existing items* applies to items matched by name: custom formats, quality profiles, sync profiles, indexers and proxies. Quality sizes, naming and media management are always updated when ticked.
+
+### TRaSH Guides profiles
+
+A TRaSH profile only holds *references*: its mandatory formats are named, and their scores live in each format's own file under the profile's *score set*. Portarr resolves all of it:
+
+1. It downloads the [guides' repository](https://github.com/TRaSH-Guides/Guides) once (about 25 MB, of which it keeps 1.2 MB of JSON) and caches it for 12 hours in `/config/cache`.
+2. For the chosen profile it gathers the mandatory formats and the optional groups that apply, with each score. What the guides recommend is ticked by default.
+3. It builds a complete Portarr export (profile, scores, format definitions) that goes through the usual preview and backup.
+
+Qualities keep the guides' order, and any quality the guide doesn't mention is added at the bottom, disabled.
+
+- **Internet access is needed** the first time and for *Update the guides*. Offline, the cached copy is used even if outdated. Pasting custom formats works offline.
+- **Radarr and Sonarr only**: the guides cover nothing else.
+- The guides' quality sizes and naming are not imported yet, and their *conflicts* file is not enforced. Read each group's description (for example, score only one of the two x265 formats).
+- `TRASH_GUIDES_URL` points to another archive, such as a mirror.
+
+### Prowlarr indexer secrets
+
+Prowlarr masks API keys, passwords and usernames in its API, so they **cannot be exported**. Portarr never writes them to a file. On import:
+
+- a **new** indexer that needs them is created **disabled**, without a connection test, which would fail. Fill in its secrets on the target, then enable it;
+- an **existing** indexer keeps its secrets, and its enabled state is left alone if it has any;
+- public indexers have no secrets and are created normally.
+
+*Applications* (the Prowlarr → Radarr/Sonarr links, which hold API keys) and download clients are deliberately not handled: they depend on your environment.
+
+## Updating
+
+| Setup | Command or action |
+|---|---|
+| Docker Compose | `git pull && docker compose up -d --build` |
+| docker run | `docker pull ghcr.io/ali0cha/portarr:latest`, then remove and recreate the container (the volume is kept) |
+| TrueNAS | *Apps → portarr → Edit → Save*. With `pull_policy: always` in the YAML, TrueNAS re-downloads the image |
+
+If TrueNAS keeps the old image, run `sudo docker pull ghcr.io/ali0cha/portarr:latest` from the NAS shell, then *Edit → Save* again.
+
+The published image only changes when the latest build in this repository's **Actions** tab is green. To check what is running, read the bottom of the sidebar: the **version** and the **commit** the image was built from (for example `build a1b2c3d`). An image built by hand shows `build dev`.
+
+Your instances and backups live in `/config` and survive updates.
+
+## Reference
+
+### Security
+
+Portarr holds your instances' API keys. Keep it on your local network, and set `AUTH_USER` and `AUTH_PASSWORD` (HTTP basic authentication) unless the port is limited to a trusted network. Don't expose it directly to the Internet; put it behind an HTTPS reverse proxy if you must. `/healthz` stays public.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `8765` | Listening port inside the container |
+| `CONFIG_DIR` | `/config` | `instances.json` (mode 600), `backups/` and `cache/` |
+| `TRASH_GUIDES_URL` | GitHub archive of the TRaSH repository | Address of the guides' `.tar.gz` archive |
+| `AUTH_USER`, `AUTH_PASSWORD` | empty | Enable authentication when both are set |
+
+### Export file format
+
+Readable, versioned JSON (`"format": "portarr"`, `"version": 1`). Profiles reference formats and qualities by name:
 
 ```json
 {
@@ -204,28 +186,26 @@ JSON lisible, versionné (`"format": "portarr"`, `"version": 1`). Les profils r�
 }
 ```
 
-## Identité visuelle
+### Design
 
-L'interface reprend la structure de la dernière version de Sonarr (en-tête coloré, barre latérale, barre d'outils icône + libellé, cartes, police Inter, jeu de couleurs OKLCH clair / sombre). Chaque application de la suite [Servarr](https://wiki.servarr.com/) a sa teinte : Sonarr cyan, Radarr jaune, Lidarr vert, Readarr rouge sombre, Prowlarr orange, Whisparr rose. **Portarr prend le violet**, la teinte restée libre ; les badges d'instance gardent la couleur de leur application. Le logo est dans [`app/static/logo.svg`](app/static/logo.svg).
+The interface follows the structure of the latest Sonarr: coloured header, sidebar, cards, Inter font and a light / dark OKLCH palette. Each [Servarr](https://wiki.servarr.com/) application has its own hue (Sonarr cyan, Radarr yellow, Lidarr green, Readarr dark red, Prowlarr orange, Whisparr pink), and **Portarr takes the free one, violet**. Instance badges keep their application's colour. The logo is [`app/static/logo.svg`](app/static/logo.svg). The Inter font (SIL OFL, see `app/static/fonts/LICENSE-Inter.txt`) is bundled, so nothing is loaded from the Internet.
 
-La police Inter (licence SIL OFL, voir `app/static/fonts/LICENSE-Inter.txt`) est embarquée : aucune ressource externe n'est chargée.
+## Development
 
-## Développement
+The backend is FastAPI (`app/`) and the frontend is plain JavaScript with no build step (`app/static/`).
 
 ```bash
-./run_tests.sh                                   # tests dans un conteneur Python jetable
+./run_tests.sh                                   # tests in a throwaway Python container
 python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004 lidarr-a:7005 lidarr-b:7006 whisparr-a:7007 whisparr-b:7008 prowlarr-a:7009 prowlarr-b:7010
-                                                 # faux serveurs de démonstration (clé « demo-key »), un « -a » rempli et un « -b » cible par application
-CONFIG_DIR=./config python -m app                # l'application sur http://localhost:8765
-python -m tests.fake_trash 7100                  # mini dépôt TRaSH hors ligne (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
+                                                 # fake servers, key "demo-key": a populated "-a" and a target "-b" per application
+python -m tests.fake_trash 7100                  # offline mini TRaSH repository (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
+CONFIG_DIR=./config python -m app                # the app on http://localhost:8765
 ```
 
-Les textes de l'interface sont dans la table `I18N` de `app/static/app.js` ; `tests/test_i18n.py` vérifie que le français et l'anglais restent alignés (mêmes clés, mêmes `{0}`).
+- `tests/fake_arr.py` simulates the APIs in memory (unique names, valid cutoffs, format IDs, masked secrets, `forceSave`). The tests cover the round trip between two instances with different IDs, the idempotence of a second import, and the absence of secrets in exports.
+- Interface texts are in the `I18N` table of `app/static/app.js`. `tests/test_i18n.py` keeps English and French in step, and `tests/test_readmes.py` does the same for the two READMEs.
+- To release a new version, change `__version__` in `app/__init__.py`. The GitHub build adds the commit.
 
-Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py` ; le commit est ajouté automatiquement par la construction GitHub.
+## Ideas for later
 
-Le backend est du FastAPI (`app/`), le frontend du JavaScript sans étape de build (`app/static/`). `tests/fake_arr.py` simule en mémoire l'API de Radarr, Sonarr, Whisparr et Lidarr (noms uniques, cutoff valide, IDs de formats, profils de métadonnées) et de Prowlarr (secrets masqués, validation à l'enregistrement, `forceSave`). Les tests couvrent notamment l'aller-retour entre deux instances aux IDs différents, l'idempotence d'un second import et l'absence de secrets dans les exports.
-
-## Pistes d'évolution
-
-Tailles par qualité et nommage des TRaSH Guides, prise en compte de leur fichier de conflits, profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par le serveur.
+TRaSH quality sizes and naming, honouring the TRaSH conflicts file, delay profiles, release profiles (Sonarr, Lidarr), Readarr, sync with deletion, translating the messages returned by the servers.
