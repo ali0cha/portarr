@@ -178,6 +178,8 @@ Si TrueNAS garde l'ancienne image, lancez `sudo docker pull ghcr.io/ali0cha/port
 
 L'image publiée ne change que lorsque la dernière construction de l'onglet **Actions** de ce dépôt est verte. Pour savoir ce qui tourne, lisez le bas de la barre latérale : la **version** et le **commit** dont l'image a été construite (par exemple `build a1b2c3d`). Une image construite à la main affiche `build dev`.
 
+**Avis de mise à jour.** Quand une version plus récente existe, un lien apparaît sous la version, en bas de la barre latérale. Portarr compare son `__version__` à celui de la branche `main` de ce dépôt : une toute petite requête vers `raw.githubusercontent.com`, au plus toutes les 6 heures, qui n'envoie rien sur vous ni sur vos instances. Hors ligne, rien ne s'affiche. Le lien peut apparaître quelques minutes avant la publication de la nouvelle image : vérifiez d'abord que la construction est verte. `PORTARR_UPDATE_CHECK=0` la désactive.
+
 Vos instances et vos sauvegardes sont dans `/config` et survivent aux mises à jour.
 
 ## Référence
@@ -193,6 +195,9 @@ Portarr détient les clés API de vos instances. Gardez-le sur votre réseau loc
 | `PORT` | `8765` | Port d'écoute dans le conteneur |
 | `CONFIG_DIR` | `/config` | `instances.json` (mode 600), `backups/` et `cache/` |
 | `TRASH_GUIDES_URL` | archive GitHub du dépôt TRaSH | Adresse de l'archive `.tar.gz` des guides |
+| `PORTARR_UPDATE_CHECK` | `1` | Mettre à `0` pour ne plus chercher de nouvelle version |
+| `PORTARR_REPO` | `ali0cha/portarr` | Dépôt lu par la vérification et vers lequel pointe le lien (pour un fork) |
+| `PORTARR_UPDATE_URL` | branche `main` de `PORTARR_REPO` | Adresse du fichier contenant le dernier `__version__` |
 | `AUTH_USER`, `AUTH_PASSWORD` | vides | Activent l'authentification si les deux sont définies |
 
 ### Format du fichier d'export
@@ -230,7 +235,7 @@ CONFIG_DIR=./config python -m app                # l'application sur http://loca
 - `tests/fake_arr.py` simule les API en mémoire (noms uniques, cutoffs valides, IDs de formats, secrets masqués, `forceSave`). Les tests couvrent l'aller-retour entre deux instances aux IDs différents, l'idempotence d'un second import et l'absence de secrets dans les exports.
 - Les textes de l'interface sont dans la table `I18N` de `app/static/app.js`. `tests/test_i18n.py` garde l'anglais et le français alignés, et `tests/test_readmes.py` fait de même pour les deux README.
 - `docs/screenshots/` est généré par `tools/screenshots/run.sh` (la vraie application, les faux serveurs et Chromium sans interface). Régénérez-le après une modification de l'interface.
-- Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py`. La construction GitHub ajoute le commit.
+- Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py`. La construction GitHub ajoute le commit, et les installations affichent le lien de mise à jour dès que `main` porte le nouveau numéro.
 
 ## Pistes d'évolution
 

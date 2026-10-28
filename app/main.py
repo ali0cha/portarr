@@ -23,15 +23,28 @@ from .arr import ArrClient, ArrError
 from .porter import Importer, PorterError, export_bundle, parse_bundle
 from .trash import DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, list_profiles, profile_detail, profile_from_catalog
 from .store import InstanceStore, public
+from .updates import UpdateChecker
 
 mimetypes.add_type("font/woff2", ".woff2")  # not in every base image
 
+DEFAULT_REPO = "ali0cha/portarr"
+
+
+def safe_repo(value: str) -> str:
+    """The repository name is pasted into URLs, so only a plain "owner/name" is accepted."""
+    return value if re.fullmatch(r"[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*", value) else DEFAULT_REPO
+
+
+REPO = safe_repo(os.environ.get("PORTARR_REPO", DEFAULT_REPO))
 COMMIT = os.environ.get("PORTARR_COMMIT", "")[:7]  # baked into the Docker image by the build
 CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/config"))
 AUTH_USER = os.environ.get("AUTH_USER", "")
 AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "")
 
 store = InstanceStore(CONFIG_DIR / "instances.json")
+updates = UpdateChecker(
+    os.environ.get("PORTARR_UPDATE_URL") or f"https://raw.githubusercontent.com/{REPO}/main/app/__init__.py", __version__,
+    enabled=os.environ.get("PORTARR_UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off"))
 catalog = TrashCatalog(CONFIG_DIR / "cache" / "trash-guides.json", os.environ.get("TRASH_GUIDES_URL", DEFAULT_URL))
 backup_dir = CONFIG_DIR / "backups"
 
@@ -155,6 +168,11 @@ async def healthz():
 @app.get("/api/version")
 async def version():
     return {"version": __version__, "commit": COMMIT or None}
+
+
+@app.get("/api/update")
+async def update_status():
+    return {**await updates.status(), "url": f"https://github.com/{REPO}#updating"}
 
 
 @app.get("/api/instances")

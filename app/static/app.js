@@ -49,6 +49,7 @@ const I18N = {
     rev_nothing: "Nothing to apply: {0} already matches.", rev_pick: "Select at least one change to apply.",
     done_text: "{0} change(s) applied to {1}.", done_undo: "To undo: Import → A file, choose the backup below, and tick “overwrite”.",
     inst_empty_title: "No instance yet", inst_empty_cta: "Add your first Radarr, Sonarr, Lidarr, Whisparr or Prowlarr instance to get started.",
+    update_available: "Version {0} is available", update_title: "You run v{0}. Click to see how to update.",
     inst_add_tile: "Add an instance", tls_off: "TLS certificate not verified", build_title: "Built from commit {0}",
     imp_no_same_app: "There is no other {0} instance to copy from. Add one in Instances, or use a file.",
     src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
@@ -104,6 +105,7 @@ const I18N = {
     rev_nothing: "Rien à appliquer : {0} correspond déjà.", rev_pick: "Sélectionnez au moins un changement à appliquer.",
     done_text: "{0} changement(s) appliqué(s) à {1}.", done_undo: "Pour annuler : Import → Un fichier, choisissez la sauvegarde ci-dessous et cochez « écraser ».",
     inst_empty_title: "Aucune instance", inst_empty_cta: "Ajoutez votre première instance Radarr, Sonarr, Lidarr, Whisparr ou Prowlarr pour commencer.",
+    update_available: "La version {0} est disponible", update_title: "Vous utilisez la v{0}. Cliquez pour voir comment mettre à jour.",
     inst_add_tile: "Ajouter une instance", tls_off: "certificat TLS non vérifié", build_title: "Construit depuis le commit {0}",
     imp_no_same_app: "Il n'y a pas d'autre instance {0} à copier. Ajoutez-en une dans Instances, ou utilisez un fichier.",
     src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
@@ -157,6 +159,7 @@ const ICONS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
 };
 function icon(name) {
@@ -246,7 +249,7 @@ function setLang(code) {
   storage("set", "portarr-lang", code);
   document.documentElement.lang = code;
   renderHeader();
-  renderVersion();
+  paintVersion();
   render(); // rebuilds the current screen in the new language; choices already made are kept in S
 }
 
@@ -255,6 +258,8 @@ const S = {
   tab: "instances",
   instances: [],
   editing: null, // null | "new" | instance id
+  version: null, // {version, commit}, from /api/version
+  update: null, // {available, latest, current, url}, from /api/update
   exp: { id: "", bundle: null, sel: {}, error: null, saved: null },
   imp: { step: 1, mode: "file", text: "", fileName: "", sourceLabel: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
     trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0, open: new Map() } },
@@ -860,12 +865,22 @@ async function viewBackups() {
 }
 
 // Version and build, bottom of the sidebar: tells whether the NAS really runs the latest image.
+function paintVersion() {
+  const v = S.version;
+  if (!v) return;
+  const u = S.update;
+  fill(document.getElementById("version"), h("strong", null, `Portarr v${v.version}`),
+    v.commit ? h("span", { class: "build", title: t("build_title", v.commit) }, `build ${v.commit}`) : null,
+    u?.available ? h("a", { class: "update", href: u.url, target: "_blank", rel: "noopener noreferrer", title: t("update_title", u.current) },
+      icon("up"), t("update_available", u.latest)) : null);
+}
+
+// Both calls are conveniences, never blockers: a failure just leaves the sidebar as it is.
 async function renderVersion() {
-  try {
-    const v = await api("/api/version");
-    fill(document.getElementById("version"), h("strong", null, `Portarr v${v.version}`),
-      v.commit ? h("span", { class: "build", title: t("build_title", v.commit) }, `build ${v.commit}`) : null);
-  } catch { /* the version is a convenience, never a blocker */ }
+  try { S.version = await api("/api/version"); } catch { return; }
+  paintVersion();
+  try { S.update = await api("/api/update"); } catch { return; } // the server answers from its cache, or asks GitHub once
+  paintVersion();
 }
 
 renderHeader();
