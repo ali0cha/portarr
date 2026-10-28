@@ -1,6 +1,8 @@
 """Minimal async client for the Sonarr / Radarr / Whisparr (API v3) and Lidarr / Prowlarr (API v1) APIs."""
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable
 from typing import Any, ClassVar
 
 import httpx
@@ -36,6 +38,18 @@ def _error_message(resp: httpx.Response) -> str:
     return f"HTTP {resp.status_code}"
 
 
+async def gather(*aws: Awaitable[Any]) -> list[Any]:
+    """asyncio.gather that cancels the siblings as soon as one fails, so none outlives the HTTP client."""
+    tasks = [asyncio.ensure_future(a) for a in aws]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 class ArrClient:
     # Tests point this at an in-process fake server.
     transport_override: ClassVar[httpx.AsyncBaseTransport | None] = None
@@ -43,6 +57,7 @@ class ArrClient:
     def __init__(self, url: str, api_key: str, verify: bool = True, app: str | None = None):
         # Unknown app: the first status() call probes v3 then v1.
         self.api: str | None = API_VERSIONS.get(app or "")
+        self._status: dict[str, Any] | None = None  # one status read per client, not per step
         self._http = httpx.AsyncClient(
             base_url=url.rstrip("/"),
             headers={"X-Api-Key": api_key, "Accept": "application/json"},
@@ -52,7 +67,7 @@ class ArrClient:
             transport=self.transport_override,
         )
 
-    async def __aenter__(self) -> "ArrClient":
+    async def __aenter__(self) -> ArrClient:
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
@@ -88,6 +103,8 @@ class ArrClient:
         return await self.request("PUT", path, json)
 
     async def status(self) -> dict[str, Any]:
+        if self._status is not None:
+            return self._status
         candidates = [self.api] if self.api else ["v3", "v1"]
         for i, version in enumerate(candidates):
             self.api = version
@@ -102,4 +119,5 @@ class ArrClient:
         if name not in SUPPORTED_APPS:
             raise ArrError(f"Unsupported application {s.get('appName')!r}: only Radarr, Sonarr, Lidarr, Whisparr and Prowlarr")
         self.api = API_VERSIONS[name]
-        return {"app": name, "version": s.get("version"), "instanceName": s.get("instanceName")}
+        self._status = {"app": name, "version": s.get("version"), "instanceName": s.get("instanceName")}
+        return self._status

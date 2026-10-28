@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -36,6 +37,7 @@ backup_dir = CONFIG_DIR / "backups"
 
 app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None)
 log = logging.getLogger("uvicorn.error")
+app.add_middleware(GZipMiddleware, minimum_size=1024)  # app.js is 51 KB, exports and previews can be large
 
 
 def config_writable() -> bool:
@@ -287,4 +289,16 @@ async def get_backup(name: str):
     return FileResponse(path, media_type="application/json", filename=name)
 
 
-app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="static")
+class Assets(StaticFiles):
+    """The interface files. Without a Cache-Control header browsers keep stale copies for hours, so after an
+    update the old interface keeps running: revalidate every time (a 304 when nothing changed). Fonts never
+    change, so they may be cached."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code in (200, 304):
+            response.headers["Cache-Control"] = "public, max-age=604800" if path.startswith("fonts/") else "no-cache"
+        return response
+
+
+app.mount("/", Assets(directory=Path(__file__).parent / "static", html=True), name="static")

@@ -3,9 +3,7 @@
    (Sonarr cyan, Radarr yellow, Lidarr green, Readarr red, Prowlarr orange, Whisparr pink). */
 
 @font-face { font-family: Inter; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400.woff2) format("woff2"); }
-@font-face { font-family: Inter; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500.woff2) format("woff2"); }
 @font-face { font-family: Inter; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600.woff2) format("woff2"); }
-@font-face { font-family: Inter; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700.woff2) format("woff2"); }
 
 :root {
   color-scheme: light dark;
@@ -21,7 +19,6 @@
   --ink: light-dark(oklch(18% 0.014 285), oklch(90% 0.007 285));
   --inkSoft: light-dark(oklch(32% 0.012 285), oklch(82% 0.009 285));
   --inkMuted: light-dark(oklch(44% 0.012 285), oklch(68% 0.011 285));
-  --inkFaint: light-dark(oklch(72% 0.007 285), oklch(53% 0.011 285));
 
   /* brand */
   --accent: light-dark(oklch(66% 0.150 295), oklch(78% 0.120 295));

@@ -73,7 +73,7 @@ def make_fake(app_name: str = "Radarr", api_key: str = "key", seed: str = "empty
     ids = [qid for qid, _ in table]
     group_name = "Lossless" if lidarr else "WEB 1080p"
     naming_key = "standardMovieFormat" if radarr else "standardTrackFormat" if lidarr else "standardEpisodeFormat"
-    lf = lambda qid, allowed, sizes=None: leaf(qid, allowed, table, SIZE_NONE if whisparr and sizes is None else sizes)  # noqa: E731
+    lf = lambda qid, allowed, sizes=None: leaf(qid, allowed, table, SIZE_NONE if whisparr and sizes is None else sizes)
     db: dict[str, Any] = {
         "cfs": [], "profiles": [], "next_id": cf_id_base, "meta": [],
         "defs": [

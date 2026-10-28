@@ -7,11 +7,12 @@ one instance can be replayed on another one where the numeric ids differ.
 from __future__ import annotations
 
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from functools import partial
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
-from .arr import ArrClient, ArrError
+from .arr import ArrClient, ArrError, gather
 
 FORMAT = "portarr"
 VERSION = 1
@@ -36,6 +37,18 @@ SECRET_MASK = "********"  # what the API returns instead of passwords / API keys
 
 class PorterError(Exception):
     pass
+
+
+async def _maybe(aw: Awaitable[Any]) -> Any:
+    """An optional read: None when this version of the application does not have it."""
+    try:
+        return await aw
+    except ArrError:
+        return None
+
+
+async def _none() -> None:
+    return None
 
 
 # --------------------------------------------------------------------------- normalisation
@@ -221,7 +234,7 @@ def diff_profile(cur: dict[str, Any], new: dict[str, Any]) -> list[str]:
         if ca - na:
             changes.append("qualities disabled: " + ", ".join(sorted(ca - na)))
         if ca == na:
-            shape = lambda items: [(i["name"], tuple(i.get("items", []))) for i in items]  # noqa: E731
+            shape = lambda items: [(i["name"], tuple(i.get("items", []))) for i in items]
             changes.append("quality order or grouping changed" if shape(cur["items"]) != shape(new["items"])
                            else "quality size limits changed")
     cs = {x["name"]: x["score"] for x in cur["formatItems"]}
@@ -267,7 +280,7 @@ async def export_bundle(client: ArrClient, instance_name: str = "") -> dict[str,
     bundle: dict[str, Any] = {
         "format": FORMAT,
         "version": VERSION,
-        "exportedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "exportedAt": datetime.now(UTC).isoformat(timespec="seconds"),
         "source": {"app": status["app"], "version": status["version"], "instanceName": instance_name},
     }
     if status["app"] == "prowlarr":
@@ -278,35 +291,32 @@ async def export_bundle(client: ArrClient, instance_name: str = "") -> dict[str,
 
 
 async def _export_arr(client: ArrClient, bundle: dict[str, Any]) -> None:
-    cfs = await client.get("customformat")
-    profiles = await client.get("qualityprofile")
-    defs = await client.get("qualitydefinition")
+    lidarr = bundle["source"]["app"] == "lidarr"
+    # the reads are independent: one round trip instead of six
+    cfs, profiles, defs, meta, *configs = await gather(
+        client.get("customformat"), client.get("qualityprofile"), client.get("qualitydefinition"),
+        client.get("metadataprofile") if lidarr else _none(),
+        *(_maybe(client.get(path)) for path in CONFIG_PATHS.values()))
     cf_names = {c["id"]: c["name"] for c in cfs}
     bundle["customFormats"] = [normalize_cf(c) for c in sorted(cfs, key=lambda c: c["name"].lower())]
     bundle["qualityProfiles"] = [normalize_profile(p, cf_names) for p in sorted(profiles, key=lambda p: p["name"].lower())]
     bundle["qualityDefinitions"] = [normalize_definition(d) for d in sorted(defs, key=lambda d: d.get("weight", 0))]
-    if bundle["source"]["app"] == "lidarr":
-        meta = await client.get("metadataprofile")
+    if lidarr:
         bundle["metadataProfiles"] = [normalize_metadata_profile(p) for p in sorted(meta, key=lambda p: p["name"].lower())]
-    for section, path in CONFIG_PATHS.items():
-        try:
-            bundle[section] = normalize_config(await client.get(path))
-        except ArrError:
-            pass  # not available on this version
+    for section, config in zip(CONFIG_PATHS, configs, strict=True):
+        if config is not None:  # None: not available on this version
+            bundle[section] = normalize_config(config)
 
 
 async def _export_prowlarr(client: ArrClient, bundle: dict[str, Any]) -> None:
-    tag_labels = {t["id"]: t["label"] for t in await client.get("tag")}
-    profiles = await client.get("appprofile")
+    tags, profiles, proxies, indexers = await gather(
+        client.get("tag"), client.get("appprofile"), client.get("indexerproxy"), client.get("indexer"))
+    tag_labels = {t["id"]: t["label"] for t in tags}
     profile_names = {p["id"]: p["name"] for p in profiles}
-    by_name = lambda x: x["name"].lower()  # noqa: E731
+    by_name = lambda x: x["name"].lower()
     bundle["appProfiles"] = [normalize_app_profile(p) for p in sorted(profiles, key=by_name)]
-    bundle["indexerProxies"] = [
-        normalize_provider(p, tag_labels) for p in sorted(await client.get("indexerproxy"), key=by_name)
-    ]
-    bundle["indexers"] = [
-        normalize_indexer(i, tag_labels, profile_names) for i in sorted(await client.get("indexer"), key=by_name)
-    ]
+    bundle["indexerProxies"] = [normalize_provider(p, tag_labels) for p in sorted(proxies, key=by_name)]
+    bundle["indexers"] = [normalize_indexer(i, tag_labels, profile_names) for i in sorted(indexers, key=by_name)]
 
 
 def validate_bundle(bundle: Any) -> dict[str, Any]:
@@ -512,18 +522,16 @@ class Importer:
         src = self._pick("qualityProfiles", "name")
         if not src:
             return []
-        cfs = [{"id": c["id"], "name": c["name"]} for c in await self.client.get("customformat")]
+        wants_language = any(p.get("language") for p in src)  # Radarr, Whisparr v3: a language per profile
+        cf_list, profile_list, schema, language_list = await gather(
+            self.client.get("customformat"), self.client.get("qualityprofile"), self.client.get("qualityprofile/schema"),
+            _maybe(self.client.get("language")) if wants_language else _none())
+        cfs = [{"id": c["id"], "name": c["name"]} for c in cf_list]
         cf_names = {c["id"]: c["name"] for c in cfs}
         cfs += [{"id": None, "name": n} for n in sorted(self.pending_cfs)]
-        existing = {p["name"].lower(): p for p in await self.client.get("qualityprofile")}
-        schema = await self.client.get("qualityprofile/schema")
+        existing = {p["name"].lower(): p for p in profile_list}
         qualities = _quality_index(schema["items"])
-        languages: dict[str, Any] = {}
-        if any(p.get("language") for p in src):  # Radarr, Whisparr v3: a language per profile
-            try:
-                languages = {lang["name"].lower(): lang for lang in await self.client.get("language")}
-            except ArrError:
-                pass
+        languages = {lang["name"].lower(): lang for lang in language_list or []}
         items = []
         for p in src:
             item = self._item("qualityProfiles", p["name"])
@@ -620,8 +628,8 @@ class Importer:
         src = self._pick("metadataProfiles", "name")
         if not src:
             return []
-        existing = {p["name"].lower(): p for p in await self.client.get("metadataprofile")}
-        schema = await self.client.get("metadataprofile/schema")
+        listing, schema = await gather(self.client.get("metadataprofile"), self.client.get("metadataprofile/schema"))
+        existing = {p["name"].lower(): p for p in listing}
         if isinstance(schema, list):
             schema = schema[0]
         items = []
@@ -720,14 +728,11 @@ class Importer:
         if not src:
             return []
         is_indexer = section == "indexers"
-        await self._load_tags()
-        existing = {x["name"].lower(): x for x in await self.client.get(path)}
-        profiles: dict[str, int] = {}
-        profile_names: dict[int, str] = {}
-        if is_indexer:
-            plist = await self.client.get("appprofile")
-            profiles = {p["name"].lower(): p["id"] for p in plist}
-            profile_names = {p["id"]: p["name"] for p in plist}
+        listing, plist, _ = await gather(
+            self.client.get(path), self.client.get("appprofile") if is_indexer else _none(), self._load_tags())
+        existing = {x["name"].lower(): x for x in listing}
+        profiles = {p["name"].lower(): p["id"] for p in plist or []}
+        profile_names = {p["id"]: p["name"] for p in plist or []}
         schema: list[dict[str, Any]] | None = None
         items = []
         for s in src:

@@ -257,7 +257,7 @@ const S = {
   editing: null, // null | "new" | instance id
   exp: { id: "", bundle: null, sel: {}, error: null, saved: null },
   imp: { step: 1, mode: "file", text: "", fileName: "", sourceLabel: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
-    trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0 } },
+    trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0, open: new Map() } },
 };
 
 const TABS = [["instances", "server"], ["export", "upload"], ["import", "download"], ["backups", "archive"]];
@@ -270,10 +270,6 @@ function renderTabs() {
 const tools = { set: (list) => document.getElementById("toolbar").replaceChildren(...list.filter(Boolean)) };
 function toolBtn(iconName, text, onclick, { primary = false, disabled = false } = {}) {
   return h("button", { class: `tool${primary ? " primary" : ""}`, title: text, onclick, disabled }, icon(iconName), h("span", { class: "lbl" }, text));
-}
-function setToolLabel(btn, text) {
-  btn.querySelector(".lbl").textContent = text;
-  btn.title = text;
 }
 
 // The bottom bar is the one place for "what happens next": a short message and the next action(s).
@@ -739,7 +735,7 @@ function trashPanel(m, app, onChange = () => {}) {
     box.append(h("p", { class: "hint", style: "margin:0" }, t("trash_only")));
     return box;
   }
-  if (T.app !== app) Object.assign(T, { app, profiles: null, profileId: "", detail: null, selected: new Set(), error: null });
+  if (T.app !== app) Object.assign(T, { app, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, open: new Map() });
 
   const load = async (force = false) => {
     T.error = null; T.profiles = null; draw();
@@ -752,13 +748,20 @@ function trashPanel(m, app, onChange = () => {}) {
     draw();
   };
   const pick = async (id) => {
-    T.profileId = id; T.detail = null; T.selected = new Set(); draw();
+    T.profileId = id; T.detail = null; T.selected = new Set(); T.open = new Map(); draw();
     if (!id) return;
     try {
       T.detail = await api(`/api/trash/${app}/profiles/${id}`);
       T.selected = new Set(T.detail.defaults);
     } catch (e) { toast(e.message, "error"); }
     draw();
+  };
+
+  // draw() rebuilds the panel on every tick, so what the user opened or closed is kept here, not in the DOM
+  const remember = (key, el, byDefault) => {
+    el.open = T.open.has(key) ? T.open.get(key) : byDefault;
+    el.addEventListener("toggle", () => T.open.set(key, el.open));
+    return el;
   };
 
   const formatRow = (f, locked) => h("li", null, h("label", null,
@@ -782,11 +785,11 @@ function trashPanel(m, app, onChange = () => {}) {
       draw();
     } });
     all.indeterminate = n > 0 && n < ids.length;
-    return h("details", { class: "section card", open: g.default },
+    return remember(g.trash_id, h("details", { class: "section card" },
       h("summary", null, all, h("span", { class: "grow" }, g.name), g.default ? h("span", { class: "badge b-create" }, t("trash_group_default")) : null,
         h("span", { class: "badge" }, `${n} / ${ids.length}`)),
       g.description ? h("div", { class: "detail", style: "margin-left:0" }, g.description) : null,
-      h("ul", null, g.formats.map((f) => formatRow(f, false))));
+      h("ul", null, g.formats.map((f) => formatRow(f, false)))), g.default);
   };
 
   const draw = () => {
@@ -809,8 +812,8 @@ function trashPanel(m, app, onChange = () => {}) {
       d ? h("div", null,
         d.profile.description ? h("p", { class: "hint" }, d.profile.description) : null,
         h("p", { class: "hint" }, t("trash_hint"), " ", t("trash_count", T.selected.size)),
-        d.required.length ? h("details", { class: "section card" }, h("summary", null, h("span", { class: "grow" }, t("trash_required")), h("span", { class: "badge" }, String(d.required.length))),
-          h("ul", null, d.required.map((f) => formatRow(f, true)))) : null,
+        d.required.length ? remember("required", h("details", { class: "section card" }, h("summary", null, h("span", { class: "grow" }, t("trash_required")), h("span", { class: "badge" }, String(d.required.length))),
+          h("ul", null, d.required.map((f) => formatRow(f, true)))), false) : null,
         d.groups.length ? h("h3", { style: "margin:14px 0 8px" }, t("trash_groups")) : null,
         d.groups.map(groupBlock)) : null);
     onChange(); // the caller's "can I continue?" depends on the chosen profile
