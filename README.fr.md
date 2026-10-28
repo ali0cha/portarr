@@ -209,6 +209,10 @@ CONFIG_DIR=./config python -m app                # l'application sur http://loca
 - `docs/screenshots/` est généré par `tools/screenshots/run.sh` (la vraie application, les faux serveurs et Chromium sans interface). Régénérez-le après une modification de l'interface.
 - Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py`. La construction GitHub ajoute le commit, et les installations affichent le lien de mise à jour dès que `main` porte le nouveau numéro.
 
+## Licence
+
+Portarr est publié sous [licence MIT](LICENSE). Les changements de chaque version sont listés dans le [journal des changements](CHANGELOG.md).
+
 ## Pistes d'évolution
 
 Tailles par qualité et nommage TRaSH, prise en compte du fichier de conflits TRaSH, profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par les serveurs.
