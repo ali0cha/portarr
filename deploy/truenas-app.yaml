@@ -1,0 +1,15 @@
+# TrueNAS SCALE 24.10+ : Apps → Discover Apps → ⋮ → "Install via YAML"
+# Adaptez : l'image, le port (≥ 9000), le chemin du dataset et le mot de passe.
+services:
+  portarr:
+    image: ghcr.io/YOUR_GITHUB_USER/portarr:latest
+    restart: unless-stopped
+    user: "568:568"
+    ports:
+      - "30290:8765"
+    environment:
+      TZ: Europe/Brussels
+      AUTH_USER: admin
+      AUTH_PASSWORD: change-me
+    volumes:
+      - /mnt/YOUR_POOL/apps/portarr/config:/config

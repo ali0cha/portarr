@@ -1,0 +1,10 @@
+.git
+.github
+.venv
+tests
+deploy
+__pycache__
+*.pyc
+config
+README.md
+run_tests.sh

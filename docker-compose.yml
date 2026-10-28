@@ -1,0 +1,17 @@
+# Local / generic Docker usage:  docker compose up -d --build
+services:
+  portarr:
+    build: .
+    image: ghcr.io/YOUR_GITHUB_USER/portarr:latest
+    container_name: portarr
+    restart: unless-stopped
+    user: "568:568"
+    ports:
+      - "8765:8765"
+    environment:
+      TZ: Europe/Brussels
+      # Optional HTTP basic auth (recommended if the port is reachable beyond your LAN)
+      AUTH_USER: ""
+      AUTH_PASSWORD: ""
+    volumes:
+      - ./config:/config   # must be writable by uid 568 (chown 568:568 ./config)
