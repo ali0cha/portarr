@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import mimetypes
 import os
 import re
@@ -30,6 +31,19 @@ store = InstanceStore(CONFIG_DIR / "instances.json")
 backup_dir = CONFIG_DIR / "backups"
 
 app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None)
+log = logging.getLogger("uvicorn.error")
+
+
+def config_writable() -> bool:
+    path = CONFIG_DIR
+    while not path.exists() and path != path.parent:
+        path = path.parent
+    return os.access(path, os.W_OK)
+
+
+if not config_writable():
+    log.warning("%s is not writable by uid %s: instances cannot be saved. Give that folder to the user running "
+                "Portarr (568 on TrueNAS: chown -R 568:568 <folder>).", CONFIG_DIR, os.getuid())
 
 
 # --------------------------------------------------------------------------- auth (optional)
@@ -54,6 +68,15 @@ async def basic_auth(request: Request, call_next):
 @app.exception_handler(ArrError)
 async def arr_error(_: Request, e: ArrError):
     return JSONResponse({"detail": str(e)}, status_code=502)
+
+
+@app.exception_handler(OSError)
+async def file_error(_: Request, e: OSError):
+    log.error("File error: %s", e)
+    return JSONResponse(
+        {"detail": f"Cannot write to {CONFIG_DIR}: {e.strerror or e}. The folder must be writable by the user "
+                   f"running Portarr (uid {os.getuid()}); on TrueNAS give it to user 568."},
+        status_code=500)
 
 
 @app.exception_handler(PorterError)
@@ -114,7 +137,7 @@ async def _detect(url: str, api_key: str, verify: bool) -> dict[str, Any]:
 
 @app.get("/healthz")
 async def healthz():
-    return {"ok": True}
+    return {"ok": True, "config_writable": config_writable()}
 
 
 @app.get("/api/instances")

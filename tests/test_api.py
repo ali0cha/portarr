@@ -100,3 +100,14 @@ def test_prowlarr_instance_is_detected_and_exportable(client):
     assert {i["name"] for i in bundle["indexers"]} == {"PublicHD", "PrivTracker"}
     assert "SUPER-SECRET" not in json.dumps(bundle)
     assert client.post(f"/api/instances/{inst['id']}/test").json()["app"] == "prowlarr"
+
+
+def test_unwritable_config_gives_a_clear_error(client, monkeypatch):
+    def refuse(items):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(main.store, "_write", refuse)
+    r = add(client, "src", "ka", "Source")  # the connection test passes, saving fails
+    assert r.status_code == 500
+    assert "Permission denied" in r.json()["detail"] and "568" in r.json()["detail"]
+    assert client.get("/healthz").json() == {"ok": True, "config_writable": True}

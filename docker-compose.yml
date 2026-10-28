@@ -2,7 +2,7 @@
 services:
   portarr:
     build: .
-    image: ghcr.io/YOUR_GITHUB_USER/portarr:latest
+    image: ghcr.io/ali0cha/portarr:latest
     container_name: portarr
     restart: unless-stopped
     user: "568:568"

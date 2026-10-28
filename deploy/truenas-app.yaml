@@ -2,7 +2,7 @@
 # Adaptez : l'image, le port (≥ 9000), le chemin du dataset et le mot de passe.
 services:
   portarr:
-    image: ghcr.io/YOUR_GITHUB_USER/portarr:latest
+    image: ghcr.io/ali0cha/portarr:latest
     restart: unless-stopped
     user: "568:568"
     ports:
@@ -12,4 +12,4 @@ services:
       AUTH_USER: admin
       AUTH_PASSWORD: change-me
     volumes:
-      - /mnt/YOUR_POOL/apps/portarr/config:/config
+      - /mnt/YOUR_POOL/portarr:/config

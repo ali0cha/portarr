@@ -2,6 +2,8 @@
 
 # Portarr
 
+**Français** · [English](README.en.md)
+
 Petit outil web pour **exporter et importer la configuration de Radarr, Sonarr, Lidarr, Whisparr et Prowlarr** : formats personnalisés, profils de qualité, tailles par qualité, nommage, profils de métadonnées (Lidarr), et côté Prowlarr les profils de synchronisation, indexeurs et proxys d'indexeurs. Pensé pour appliquer les [guides TRaSH](https://trash-guides.info/Radarr/) ou répliquer une configuration d'une instance à une autre, sans tout refaire à la main.
 
 ## Ce que ça fait
@@ -41,19 +43,58 @@ Les *Applications* (liens Prowlarr → Radarr/Sonarr, qui contiennent des clés 
 
 > Lidarr et Prowlarr ont été validés contre une simulation fidèle à leur spécification OpenAPI officielle, Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification) ; aucun n'a encore été essayé sur une vraie instance. Utilisez toujours l'aperçu d'abord, la sauvegarde automatique couvre le reste.
 
+## Installation avec Docker
+
+Portarr tourne dans un seul conteneur, sans base de données : tout ce qu'il retient (vos instances et les sauvegardes) tient dans le volume `/config`. Le conteneur s'exécute avec l'utilisateur **568:568** (celui de TrueNAS), donc ce volume doit être inscriptible par lui.
+
+### Avec Docker Compose (le plus simple)
+
+```bash
+git clone https://github.com/ali0cha/portarr.git
+```
+
+```bash
+cd portarr && mkdir -p config && sudo chown 568:568 config
+```
+
+```bash
+docker compose up -d --build
+```
+
+L'image est construite localement, sans registre. Ouvrez ensuite `http://localhost:8765`. Pour mettre à jour : `git pull`, puis relancez la dernière commande.
+
+### Avec `docker run`
+
+```bash
+docker run -d --name portarr --restart unless-stopped -p 8765:8765 -v portarr-config:/config ghcr.io/ali0cha/portarr:latest
+```
+
+Un volume nommé comme `portarr-config` convient sans réglage de droits. Avec un dossier de l'hôte (`-v /chemin/config:/config`), faites d'abord `sudo chown 568:568 /chemin/config`. Pour mettre à jour : `docker pull ghcr.io/ali0cha/portarr:latest`, puis supprimez et recréez le conteneur (le volume est conservé).
+
+### Réglages utiles
+
+- **Authentification** : ajoutez `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (ou les mêmes clés sous `environment:` dans `docker-compose.yml`). Recommandé dès que le port n'est pas réservé à un réseau de confiance.
+- **Port** : changez le premier nombre de `-p 8765:8765` (ou de `ports:` dans le compose).
+- **Joindre vos instances** : indiquez une adresse que le conteneur peut atteindre, soit l'IP de l'hôte et le port de l'application (`http://192.168.1.10:7878`), soit, si Portarr et vos applications partagent un même réseau Docker, le nom du conteneur (`http://radarr:7878`). `localhost` désigne le conteneur Portarr lui-même, pas votre machine.
+- **Santé** : le conteneur déclare un healthcheck (`docker ps` affiche `healthy`).
+
 ## Installation sur TrueNAS SCALE (24.10 ou plus récent)
 
 ### 1. Obtenir l'image Docker
 
-Le plus simple : GitHub construit et publie l'image pour vous.
+TrueNAS tire l'image depuis un registre. Le plus simple : GitHub construit et publie l'image pour vous (cette même image sert pour `docker run` ci-dessus).
 
 1. Créez un dépôt GitHub et poussez ce dossier sur la branche `main`.
 2. L'onglet **Actions** lance `build` : tests, puis publication de `ghcr.io/<votre-utilisateur>/portarr:latest` (amd64 et arm64).
 3. Sur GitHub : profil → **Packages** → `portarr` → *Package settings* → visibilité **Public** (sinon TrueNAS devra s'authentifier pour tirer l'image).
 
-### 2. Créer le dataset de configuration
+### 2. Créer le dossier de configuration
 
-Créez un dataset, par exemple `/mnt/<pool>/apps/portarr/config`, et donnez à l'utilisateur **`apps` (uid 568)** les droits d'écriture (Permissions → ACL → utilisateur `apps`, contrôle total).
+Portarr tourne sous l'utilisateur **`apps` (uid 568)** et doit pouvoir écrire dans `/config`, sinon l'ajout d'une instance échoue (erreur 500, `PermissionError: … /config/instances.tmp` dans le journal).
+
+1. **Datasets** → choisissez votre pool → **Add Dataset**, nom `portarr` (réglages par défaut).
+2. Sélectionnez ce dataset → carte **Permissions** → **Edit** : utilisateur `apps`, groupe `apps`, cochez *Apply User* et *Apply Group*, puis enregistrez. Si l'éditeur d'ACL s'ouvre à la place, donnez à `apps` le contrôle total.
+3. Dans l'application, *Storage* → **Host Path** : chemin `/mnt/<pool>/portarr`, monté sur `/config`.
 
 ### 3. Installer l'application
 
@@ -62,7 +103,7 @@ Créez un dataset, par exemple `/mnt/<pool>/apps/portarr/config`, et donnez à l
 ```yaml
 services:
   portarr:
-    image: ghcr.io/VOTRE_UTILISATEUR/portarr:latest
+    image: ghcr.io/ali0cha/portarr:latest
     restart: unless-stopped
     user: "568:568"
     ports:
@@ -72,7 +113,7 @@ services:
       AUTH_USER: admin        # optionnel mais recommandé
       AUTH_PASSWORD: change-me
     volumes:
-      - /mnt/VOTRE_POOL/apps/portarr/config:/config
+      - /mnt/VOTRE_POOL/portarr:/config
 ```
 
 Ouvrez ensuite `http://<ip-truenas>:30290`.
@@ -138,4 +179,4 @@ Le backend est du FastAPI (`app/`), le frontend du JavaScript sans étape de bui
 
 ## Pistes d'évolution
 
-Import des *profils* au format TRaSH (seuls les formats personnalisés sont convertis pour l'instant), profils de délai, profils de release Sonarr, Readarr, release profiles (Sonarr, Lidarr), synchronisation avec suppression, traduction des messages renvoyés par le serveur.
+Import des *profils* au format TRaSH (seuls les formats personnalisés sont convertis pour l'instant), profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par le serveur.
