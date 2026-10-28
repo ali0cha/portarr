@@ -30,7 +30,7 @@ Key points:
 - **Same application to same application** only (Sonarr → Sonarr, Lidarr → Lidarr…): an export is refused on a different application.
 - Your instances' API keys stay on the server and are never sent back to the browser.
 
-Works with Radarr v4+/v5+, Sonarr v4+ and Whisparr v2 / v3 "Eros" (API v3), Lidarr and Prowlarr (API v1). The application type is detected automatically when you add an instance. The interface is in French or English depending on your browser, with a light / dark / automatic theme.
+Works with Radarr v4+/v5+, Sonarr v4+ and Whisparr v2 / v3 "Eros" (API v3), Lidarr and Prowlarr (API v1). The application type is detected automatically when you add an instance. The interface is **in French and in English**: your browser's language is used by default, and the **FR | EN** switch in the header changes it at any time (the choice is remembered, and nothing is lost mid-step). Light / dark / automatic theme. Only the messages returned by the servers (preview warnings) stay in English.
 
 ### Indexer secrets
 
@@ -219,6 +219,8 @@ python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004
 CONFIG_DIR=./config python -m app                # the app on http://localhost:8765
 python -m tests.fake_trash 7100                  # offline mini TRaSH repo (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
+
+The interface texts are in the `I18N` table of `app/static/app.js`; `tests/test_i18n.py` checks that French and English stay in step (same keys, same `{0}` placeholders).
 
 To release a new version, change `__version__` in `app/__init__.py`; the commit is added automatically by the GitHub build.
 

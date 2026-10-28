@@ -30,7 +30,7 @@ Points clés :
 - **Une application vers la même application** uniquement (Sonarr → Sonarr, Lidarr → Lidarr…) : un export est refusé sur une autre application.
 - Les clés API de vos instances restent côté serveur et ne sont jamais renvoyées au navigateur.
 
-Compatible Radarr v4+/v5+, Sonarr v4+ et Whisparr v2 / v3 « Eros » (API v3), Lidarr et Prowlarr (API v1). Le type d'application est détecté automatiquement à l'ajout d'une instance. Interface en français ou anglais selon le navigateur, thème clair / sombre / automatique.
+Compatible Radarr v4+/v5+, Sonarr v4+ et Whisparr v2 / v3 « Eros » (API v3), Lidarr et Prowlarr (API v1). Le type d'application est détecté automatiquement à l'ajout d'une instance. Interface **en français et en anglais** : la langue du navigateur est utilisée par défaut, et le sélecteur **FR | EN** de l'en-tête permet de changer à tout moment (le choix est mémorisé, et rien n'est perdu en pleine étape). Thème clair / sombre / automatique. Seuls les messages renvoyés par les serveurs (avertissements de l'aperçu) restent en anglais.
 
 ### Les secrets des indexeurs
 
@@ -219,6 +219,8 @@ python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004
 CONFIG_DIR=./config python -m app                # l'application sur http://localhost:8765
 python -m tests.fake_trash 7100                  # mini dépôt TRaSH hors ligne (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
+
+Les textes de l'interface sont dans la table `I18N` de `app/static/app.js` ; `tests/test_i18n.py` vérifie que le français et l'anglais restent alignés (mêmes clés, mêmes `{0}`).
 
 Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py` ; le commit est ajouté automatiquement par la construction GitHub.
 

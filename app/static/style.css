@@ -93,6 +93,10 @@ svg.icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-wid
 .pageHeader .spacer { flex: 1; }
 .iconBtn { background: none; border: 0; color: inherit; width: 38px; height: 38px; border-radius: var(--radius); display: grid; place-items: center; cursor: pointer; font-size: 20px; padding: 0; }
 .iconBtn:hover { background: var(--headerHover); }
+.langsw { display: flex; border: 1px solid oklch(100% 0 0 / 0.4); border-radius: 6px; overflow: hidden; }
+.langsw button { border: 0; border-radius: 0; background: none; color: inherit; padding: 5px 10px; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; opacity: .75; cursor: pointer; }
+.langsw button:hover { background: var(--headerHover); opacity: 1; }
+.langsw button[aria-pressed=true] { background: oklch(100% 0 0 / 0.3); opacity: 1; }
 
 /* ------------------------------------------------------------ layout */
 .layout { flex: 1; min-height: 0; display: flex; }

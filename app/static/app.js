@@ -5,8 +5,7 @@ const I18N = {
   en: {
     tab_instances: "Instances", tab_export: "Export", tab_import: "Import", tab_backups: "Backups",
     theme_auto: "Theme: automatic", theme_light: "Theme: light", theme_dark: "Theme: dark",
-    inst_hint: "Your Radarr, Sonarr, Lidarr, Whisparr and Prowlarr servers. API keys are stored on this server only and are never sent back to the browser.",
-    inst_empty: "No instance yet.", inst_add: "Add instance", inst_edit: "Edit instance",
+    inst_hint: "Your Radarr, Sonarr, Lidarr, Whisparr and Prowlarr servers. API keys are stored on this server only and are never sent back to the browser.", inst_add: "Add instance", inst_edit: "Edit instance",
     name: "Name", url: "URL", url_hint: "Include the URL base if you use one, e.g. http://192.168.1.10:7878/radarr",
     api_key: "API key", api_key_keep: "(empty = keep current key)", api_key_where: "Found in Settings → General → Security",
     verify_ssl: "Verify the TLS certificate", save: "Test & save", cancel: "Cancel", test: "Test", edit: "Edit", delete: "Delete",
@@ -14,23 +13,19 @@ const I18N = {
     connected: "Connected to {0} {1}", saved: "Saved",
     exp_hint: "Pick what to export from an instance. Everything is referenced by name so it can be imported on another instance.",
     imp_hint: "Import a bundle on an instance. You always get a preview first, and the target is backed up before anything is written.",
-    instance: "Instance", load: "Load", download_short: "Download", refresh: "Refresh",
+    instance: "Instance", refresh: "Refresh",
     loaded_from: "Loaded from {0} {1}", scored_cf_note: "Selecting a profile also selects what it depends on.",
     sec_customFormats: "Custom formats", sec_qualityProfiles: "Quality profiles", sec_qualityDefinitions: "Quality sizes",
     sec_naming: "Naming", sec_mediaManagement: "Media management",
     sec_metadataProfiles: "Metadata profiles", sec_appProfiles: "Sync profiles", sec_indexers: "Indexers", sec_indexerProxies: "Indexer proxies",
     note_conditions: "{0} condition(s)", note_profile: "{0} enabled qualities · {1} scored formats",
     note_sizes: "min {0} · preferred {1} · max {2} MB/min", note_metadata: "{0} album types · {1} secondary types · {2} statuses", note_sync: "RSS {0} · automatic {1} · interactive {2} · min. seeders {3}",
-    note_indexer: "{0} · priority {1} · profile {2}", note_proxy: "{0}", on: "on", off: "off",
-    note_secrets: "Secrets are never exported: {0}",
-    source: "Source", src_file: "A file or pasted JSON", src_instance: "Another instance", choose_file: "Choose a .json file",
-    paste_ph: "…or paste here a Portarr export or TRaSH-Guides custom format JSON",
-    target: "Target instance", overwrite: "Overwrite existing items that differ (custom formats, quality profiles, sync profiles, indexers…)",
-    overwrite_hint: "Quality sizes, naming and media management are always updated when selected.",
-    analyse: "Analyse", analysing: "Analysing…", apply_n: "Apply ({0})", applying: "Applying…",
+    note_indexer: "{0} · priority {1} · profile {2}", on: "on", off: "off",
+    note_secrets: "Secrets are never exported: {0}", src_file: "A file or pasted JSON", src_instance: "Another instance",
+    paste_ph: "…or paste here a Portarr export or TRaSH-Guides custom format JSON", overwrite: "Overwrite existing items that differ (custom formats, quality profiles, sync profiles, indexers…)",
+    overwrite_hint: "Quality sizes, naming and media management are always updated when selected.", analysing: "Analysing…", apply_n: "Apply ({0})", applying: "Applying…",
     confirm_apply: "Apply {0} change(s) on “{1}”? A backup of its current state is saved first.",
-    done: "Done", new_import: "New import", backup_saved: "Previous state of the target saved as",
-    need_source: "Choose a source first", same_instance: "Source and target must differ",
+    done: "Done", new_import: "New import", backup_saved: "Previous state of the target saved as", same_instance: "Source and target must differ",
     a_create: "new", a_update: "update", a_unchanged: "identical", a_skip: "skipped", s_ok: "done", s_error: "error",
     bk_hint: "Automatic snapshots of an instance taken just before each import. To roll back, import one of these files with “overwrite” enabled (items created by the import are not deleted).",
     bk_empty: "No backup yet.", date: "Date", size: "Size", file: "File",
@@ -54,7 +49,7 @@ const I18N = {
     rev_nothing: "Nothing to apply: {0} already matches.", rev_pick: "Select at least one change to apply.",
     done_text: "{0} change(s) applied to {1}.", done_undo: "To undo: Import → A file, choose the backup below, and tick “overwrite”.",
     inst_empty_title: "No instance yet", inst_empty_cta: "Add your first Radarr, Sonarr, Lidarr, Whisparr or Prowlarr instance to get started.",
-    inst_add_tile: "Add an instance", build_title: "Built from commit {0}",
+    inst_add_tile: "Add an instance", tls_off: "TLS certificate not verified", build_title: "Built from commit {0}",
     imp_no_same_app: "There is no other {0} instance to copy from. Add one in Instances, or use a file.",
     src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
     trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_pick: "Choose a profile…",
@@ -65,8 +60,7 @@ const I18N = {
   fr: {
     tab_instances: "Instances", tab_export: "Export", tab_import: "Import", tab_backups: "Sauvegardes",
     theme_auto: "Thème : automatique", theme_light: "Thème : clair", theme_dark: "Thème : sombre",
-    inst_hint: "Vos serveurs Radarr, Sonarr, Lidarr, Whisparr et Prowlarr. Les clés API restent sur ce serveur et ne sont jamais renvoyées au navigateur.",
-    inst_empty: "Aucune instance.", inst_add: "Ajouter", inst_edit: "Modifier l'instance",
+    inst_hint: "Vos serveurs Radarr, Sonarr, Lidarr, Whisparr et Prowlarr. Les clés API restent sur ce serveur et ne sont jamais renvoyées au navigateur.", inst_add: "Ajouter", inst_edit: "Modifier l'instance",
     name: "Nom", url: "URL", url_hint: "Ajoutez l'URL Base si vous en utilisez une, ex. http://192.168.1.10:7878/radarr",
     api_key: "Clé API", api_key_keep: "(vide = conserver la clé actuelle)", api_key_where: "Dans Paramètres → Général → Sécurité",
     verify_ssl: "Vérifier le certificat TLS", save: "Tester et enregistrer", cancel: "Annuler", test: "Tester", edit: "Modifier", delete: "Supprimer",
@@ -74,23 +68,19 @@ const I18N = {
     connected: "Connecté à {0} {1}", saved: "Enregistré",
     exp_hint: "Choisissez ce qu'il faut exporter d'une instance. Tout est référencé par nom, ce qui permet de l'importer sur une autre instance.",
     imp_hint: "Importez un fichier sur une instance. Un aperçu est toujours affiché d'abord, et la cible est sauvegardée avant toute écriture.",
-    instance: "Instance", load: "Charger", download_short: "Télécharger", refresh: "Actualiser",
+    instance: "Instance", refresh: "Actualiser",
     loaded_from: "Chargé depuis {0} {1}", scored_cf_note: "Cocher un profil coche aussi ce dont il dépend.",
     sec_customFormats: "Formats personnalisés", sec_qualityProfiles: "Profils de qualité", sec_qualityDefinitions: "Tailles par qualité",
     sec_naming: "Nommage", sec_mediaManagement: "Gestion des médias",
     sec_metadataProfiles: "Profils de métadonnées", sec_appProfiles: "Profils de synchronisation", sec_indexers: "Indexeurs", sec_indexerProxies: "Proxys d'indexeurs",
     note_conditions: "{0} condition(s)", note_profile: "{0} qualités actives · {1} formats notés",
     note_sizes: "min {0} · préféré {1} · max {2} Mo/min", note_metadata: "{0} types d'album · {1} types secondaires · {2} statuts", note_sync: "RSS {0} · automatique {1} · interactif {2} · seeders min. {3}",
-    note_indexer: "{0} · priorité {1} · profil {2}", note_proxy: "{0}", on: "oui", off: "non",
-    note_secrets: "Les secrets ne sont jamais exportés : {0}",
-    source: "Source", src_file: "Un fichier ou du JSON collé", src_instance: "Une autre instance", choose_file: "Choisir un fichier .json",
-    paste_ph: "…ou collez ici un export Portarr ou un JSON de format personnalisé TRaSH-Guides",
-    target: "Instance cible", overwrite: "Écraser les éléments existants qui diffèrent (formats personnalisés, profils de qualité, profils de synchronisation, indexeurs…)",
-    overwrite_hint: "Les tailles par qualité, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.",
-    analyse: "Analyser", analysing: "Analyse…", apply_n: "Appliquer ({0})", applying: "Application…",
+    note_indexer: "{0} · priorité {1} · profil {2}", on: "oui", off: "non",
+    note_secrets: "Les secrets ne sont jamais exportés : {0}", src_file: "Un fichier ou du JSON collé", src_instance: "Une autre instance",
+    paste_ph: "…ou collez ici un export Portarr ou un JSON de format personnalisé TRaSH-Guides", overwrite: "Écraser les éléments existants qui diffèrent (formats personnalisés, profils de qualité, profils de synchronisation, indexeurs…)",
+    overwrite_hint: "Les tailles par qualité, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.", analysing: "Analyse…", apply_n: "Appliquer ({0})", applying: "Application…",
     confirm_apply: "Appliquer {0} changement(s) sur « {1} » ? L'état actuel est d'abord sauvegardé.",
-    done: "Terminé", new_import: "Nouvel import", backup_saved: "État précédent de la cible sauvegardé sous",
-    need_source: "Choisissez d'abord une source", same_instance: "La source et la cible doivent être différentes",
+    done: "Terminé", new_import: "Nouvel import", backup_saved: "État précédent de la cible sauvegardé sous", same_instance: "La source et la cible doivent être différentes",
     a_create: "nouveau", a_update: "mise à jour", a_unchanged: "identique", a_skip: "ignoré", s_ok: "fait", s_error: "erreur",
     bk_hint: "Instantanés automatiques d'une instance pris juste avant chaque import. Pour revenir en arrière, importez l'un de ces fichiers avec « écraser » activé (les éléments créés par l'import ne sont pas supprimés).",
     bk_empty: "Aucune sauvegarde.", date: "Date", size: "Taille", file: "Fichier",
@@ -114,7 +104,7 @@ const I18N = {
     rev_nothing: "Rien à appliquer : {0} correspond déjà.", rev_pick: "Sélectionnez au moins un changement à appliquer.",
     done_text: "{0} changement(s) appliqué(s) à {1}.", done_undo: "Pour annuler : Import → Un fichier, choisissez la sauvegarde ci-dessous et cochez « écraser ».",
     inst_empty_title: "Aucune instance", inst_empty_cta: "Ajoutez votre première instance Radarr, Sonarr, Lidarr, Whisparr ou Prowlarr pour commencer.",
-    inst_add_tile: "Ajouter une instance", build_title: "Construit depuis le commit {0}",
+    inst_add_tile: "Ajouter une instance", tls_off: "certificat TLS non vérifié", build_title: "Construit depuis le commit {0}",
     imp_no_same_app: "Il n'y a pas d'autre instance {0} à copier. Ajoutez-en une dans Instances, ou utilisez un fichier.",
     src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
     trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_pick: "Choisir un profil…",
@@ -123,7 +113,10 @@ const I18N = {
     need_profile: "Choisissez d'abord un profil TRaSH", trash_hint: "Les scores viennent du jeu de scores du profil. Les groupes cochés sont la recommandation des guides ; ajustez librement, l'aperçu vient ensuite.",
   },
 };
-const lang = (navigator.language || "en").toLowerCase().startsWith("fr") ? "fr" : "en";
+const LANGS = { fr: "Français", en: "English" };
+// The browser's language by default; the FR | EN switch in the header overrides it and is remembered.
+let lang = (navigator.language || "en").toLowerCase().startsWith("fr") ? "fr" : "en";
+try { const saved = localStorage.getItem("portarr-lang"); if (saved in LANGS) lang = saved; } catch { /* storage can be blocked */ }
 document.documentElement.lang = lang;
 const t = (k, ...args) => {
   let s = I18N[lang][k] ?? I18N.en[k] ?? k;
@@ -241,8 +234,20 @@ function renderHeader() {
     applyTheme(themeMode);
     renderHeader();
   } }, icon(THEME_ICON[themeMode]));
+  const langSwitch = h("div", { class: "langsw", role: "group", "aria-label": "Language" }, Object.entries(LANGS).map(([code, name]) =>
+    h("button", { title: name, "aria-pressed": String(code === lang), onclick: () => setLang(code) }, code.toUpperCase())));
   document.getElementById("header").replaceChildren(
-    h("a", { class: "brand", href: "/" }, logoMark(), h("span", null, "Portarr")), h("div", { class: "spacer" }), btn);
+    h("a", { class: "brand", href: "/" }, logoMark(), h("span", null, "Portarr")), h("div", { class: "spacer" }), langSwitch, btn);
+}
+
+function setLang(code) {
+  if (code === lang) return;
+  lang = code;
+  storage("set", "portarr-lang", code);
+  document.documentElement.lang = code;
+  renderHeader();
+  renderVersion();
+  render(); // rebuilds the current screen in the new language; choices already made are kept in S
 }
 
 // ---------------------------------------------------------------- state & shell
@@ -341,7 +346,7 @@ function viewInstances() {
       h("div", { class: "row spread" },
         h("div", { class: "grow" },
           h("div", { class: "row" }, h("strong", { class: "name" }, i.name), h("span", { class: `badge b-${i.app}` }, cap(i.app))),
-          h("div", { class: "hint", style: "margin:0" }, i.url, i.verify_ssl ? "" : " · TLS unverified")),
+          h("div", { class: "hint", style: "margin:0" }, i.url, i.verify_ssl ? "" : ` · ${t("tls_off")}`)),
         h("div", { class: "row" },
           h("button", { onclick: (e) => busy(e.currentTarget, "…", async () => {
             const s = await api(`/api/instances/${i.id}/test`, { method: "POST" });
@@ -799,7 +804,7 @@ function trashPanel(m, app, onChange = () => {}) {
     fill(box, 
       h("label", { class: "field" }, h("span", null, t("trash_profile")), sel),
       h("div", { class: "row", style: "margin-bottom:12px" },
-        h("span", { class: "hint grow", style: "margin:0" }, t("trash_updated", new Date(T.fetchedAt * 1000).toLocaleString())),
+        h("span", { class: "hint grow", style: "margin:0" }, t("trash_updated", new Date(T.fetchedAt * 1000).toLocaleString(lang))),
         h("button", { onclick: () => load(true) }, t("trash_refresh"))),
       d ? h("div", null,
         d.profile.description ? h("p", { class: "hint" }, d.profile.description) : null,
@@ -846,7 +851,7 @@ async function viewBackups() {
         h("tr", null, h("th", null, t("file")), h("th", null, t("date")), h("th", null, t("size"))),
         files.map((f) => h("tr", null,
           h("td", null, h("a", { href: `/api/backups/${encodeURIComponent(f.name)}`, download: f.name }, f.name)),
-          h("td", null, new Date(f.mtime * 1000).toLocaleString()),
+          h("td", null, new Date(f.mtime * 1000).toLocaleString(lang)),
           h("td", null, `${Math.max(1, Math.round(f.size / 1024))} KB`)))))
       : h("p", { class: "hint" }, t("bk_empty")));
 }
