@@ -35,6 +35,11 @@ const I18N = {
     bk_hint: "Automatic snapshots of an instance taken just before each import. To roll back, import one of these files with “overwrite” enabled (items created by the import are not deleted).",
     bk_empty: "No backup yet.", date: "Date", size: "Size", file: "File",
     changes: "{0} change(s)", loading: "Loading…",
+    src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
+    trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_pick: "Choose a profile…",
+    trash_required: "Required by the profile", trash_groups: "Optional format groups", trash_group_default: "recommended", trash_req: "required",
+    trash_updated: "Guides downloaded on {0}", trash_refresh: "Update the guides", trash_count: "{0} formats selected", retry: "Retry",
+    need_profile: "Choose a TRaSH profile first", trash_hint: "Scores come from the profile's score set. Ticked groups are the guides' recommendation; adjust freely, the preview comes next.",
   },
   fr: {
     tab_instances: "Instances", tab_export: "Export", tab_import: "Import", tab_backups: "Sauvegardes",
@@ -69,6 +74,11 @@ const I18N = {
     bk_hint: "Instantanés automatiques d'une instance pris juste avant chaque import. Pour revenir en arrière, importez l'un de ces fichiers avec « écraser » activé (les éléments créés par l'import ne sont pas supprimés).",
     bk_empty: "Aucune sauvegarde.", date: "Date", size: "Taille", file: "Fichier",
     changes: "{0} changement(s)", loading: "Chargement…",
+    src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
+    trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_pick: "Choisir un profil…",
+    trash_required: "Imposés par le profil", trash_groups: "Groupes de formats optionnels", trash_group_default: "recommandé", trash_req: "requis",
+    trash_updated: "Guides téléchargés le {0}", trash_refresh: "Mettre à jour les guides", trash_count: "{0} formats sélectionnés", retry: "Réessayer",
+    need_profile: "Choisissez d'abord un profil TRaSH", trash_hint: "Les scores viennent du jeu de scores du profil. Les groupes cochés sont la recommandation des guides ; ajustez librement, l'aperçu vient ensuite.",
   },
 };
 const lang = (navigator.language || "en").toLowerCase().startsWith("fr") ? "fr" : "en";
@@ -193,7 +203,8 @@ const S = {
   instances: [],
   editing: null, // null | "new" | instance id
   exp: { id: "", bundle: null, sel: {} },
-  imp: { mode: "file", text: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null },
+  imp: { mode: "file", text: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
+    trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0 } },
 };
 
 const TABS = [["instances", "server"], ["export", "upload"], ["import", "download"], ["backups", "archive"]];
@@ -483,6 +494,8 @@ function viewImport() {
     if (f) { m.text = await f.text(); text.value = m.text; }
   } });
   const srcSelect = instanceSelect(m.srcId, (v) => { m.srcId = v; }, m.targetId);
+  const targetApp = S.instances.find((i) => i.id === m.targetId)?.app;
+  const trashBox = trashPanel(m, targetApp);
   const fileBox = h("div", null, h("label", { class: "field" }, h("span", null, t("choose_file")), file), text);
   const instBox = h("div", null, h("label", { class: "field", style: "margin:0" }, h("span", null, t("instance")), srcSelect));
   const modes = h("div", { class: "seg" });
@@ -490,9 +503,11 @@ function viewImport() {
     m.mode = mode;
     fileBox.hidden = mode !== "file";
     instBox.hidden = mode !== "instance";
+    trashBox.hidden = mode !== "trash";
     modes.replaceChildren(
       h("button", { class: mode === "file" ? "active" : "", onclick: () => setMode("file") }, t("src_file")),
-      h("button", { class: mode === "instance" ? "active" : "", onclick: () => setMode("instance") }, t("src_instance")));
+      h("button", { class: mode === "instance" ? "active" : "", onclick: () => setMode("instance") }, t("src_instance")),
+      h("button", { class: mode === "trash" ? "active" : "", onclick: () => setMode("trash") }, t("src_trash")));
   };
   setMode(m.mode);
 
@@ -505,9 +520,12 @@ function viewImport() {
       if (!m.srcId) throw new Error(t("need_source"));
       if (m.srcId === m.targetId) throw new Error(t("same_instance"));
       bundle = await api(`/api/instances/${m.srcId}/export`);
+    } else if (m.mode === "trash") {
+      if (!m.trash.profileId) throw new Error(t("need_profile"));
+      bundle = await api(`/api/trash/${m.trash.app}/build`, { method: "POST", body: { profile_id: m.trash.profileId, formats: [...m.trash.selected] } });
     } else {
       if (!m.text.trim()) throw new Error(t("need_source"));
-      bundle = await api("/api/import/parse", { method: "POST", body: { text: m.text } });
+      bundle = await api("/api/import/parse", { method: "POST", body: { text: m.text, app: targetApp } });
     }
     m.bundle = bundle;
     m.plan = await api(`/api/instances/${m.targetId}/import/preview`, { method: "POST", body: { bundle, overwrite: m.overwrite } });
@@ -522,6 +540,7 @@ function viewImport() {
   const showPlan = () => {
     const sum = m.plan.summary;
     out.replaceChildren(
+      (m.bundle.warnings ?? []).map((w) => h("div", { class: "warn", style: "margin:0 0 6px" }, `⚠ ${w}`)),
       h("div", { class: "summary" },
         ["create", "update", "unchanged", "skip"].map((k) => h("span", { class: `badge b-${k}` }, `${sum[k]} ${t(`a_${k}`)}`))),
       selectionTree(planRows(m.plan), m.sel, { bundle: m.bundle, onChange: updateApply }));
@@ -529,12 +548,102 @@ function viewImport() {
   };
 
   const node = h("div", null, h("h2", null, t("tab_import")), h("p", { class: "hint" }, t("imp_hint")),
-    h("div", { class: "card" }, h("h3", null, `1. ${t("source")}`), modes, fileBox, instBox),
+    h("div", { class: "card" }, h("h3", null, `1. ${t("source")}`), modes, fileBox, instBox, trashBox),
     h("div", { class: "card" }, h("h3", null, `2. ${t("target")}`), h("div", { class: "row" }, h("div", { class: "grow" }, target)),
       h("label", { class: "row", style: "margin-top:14px;flex-wrap:nowrap;align-items:flex-start" }, overwrite, h("span", { class: "grow" }, t("overwrite"))), h("div", { class: "hint", style: "margin:6px 0 0" }, t("overwrite_hint"))),
     out);
   if (m.plan) showPlan();
   return node;
+}
+
+const scoreBadge = (n) => h("span", { class: `badge ${n > 0 ? "b-create" : n < 0 ? "b-error" : ""}` }, n > 0 ? `+${n}` : String(n));
+
+// Source "TRaSH Guides": pick one of the guides' quality profiles and which optional formats to bring along.
+function trashPanel(m, app) {
+  const T = m.trash;
+  const box = h("div");
+  if (app !== "radarr" && app !== "sonarr") {
+    box.append(h("p", { class: "hint", style: "margin:0" }, t("trash_only")));
+    return box;
+  }
+  if (T.app !== app) Object.assign(T, { app, profiles: null, profileId: "", detail: null, selected: new Set(), error: null });
+
+  const load = async (force = false) => {
+    T.error = null; T.profiles = null; draw();
+    try {
+      if (force) await api("/api/trash/refresh", { method: "POST" });
+      const r = await api(`/api/trash/${app}/profiles`);
+      T.profiles = r.profiles; T.fetchedAt = r.fetchedAt;
+      if (T.profileId && !T.profiles.some((p) => p.id === T.profileId)) Object.assign(T, { profileId: "", detail: null });
+    } catch (e) { T.error = e.message; }
+    draw();
+  };
+  const pick = async (id) => {
+    T.profileId = id; T.detail = null; T.selected = new Set(); draw();
+    if (!id) return;
+    try {
+      T.detail = await api(`/api/trash/${app}/profiles/${id}`);
+      T.selected = new Set(T.detail.defaults);
+    } catch (e) { toast(e.message, "error"); }
+    draw();
+  };
+
+  const formatRow = (f, locked) => h("li", null, h("label", null,
+    h("input", { type: "checkbox", checked: locked || T.selected.has(f.trash_id), disabled: locked, onchange: (e) => {
+      const group = T.detail.groups.find((g) => g.formats.some((x) => x.trash_id === f.trash_id));
+      e.target.checked ? T.selected.add(f.trash_id) : T.selected.delete(f.trash_id);
+      // using any format of a group means its required formats come along
+      if (group) {
+        const used = group.formats.some((x) => !x.required && T.selected.has(x.trash_id));
+        group.formats.filter((x) => x.required).forEach((x) => (used ? T.selected.add(x.trash_id) : T.selected.delete(x.trash_id)));
+      }
+      draw();
+    } }),
+    h("span", { class: "name grow" }, f.name), f.required && !locked ? h("span", { class: "badge" }, t("trash_req")) : null, scoreBadge(f.score)));
+
+  const groupBlock = (g) => {
+    const ids = g.formats.map((f) => f.trash_id);
+    const n = ids.filter((i) => T.selected.has(i)).length;
+    const all = h("input", { type: "checkbox", checked: n === ids.length && n > 0, onclick: (e) => e.stopPropagation(), onchange: (e) => {
+      ids.forEach((i) => (e.target.checked ? T.selected.add(i) : T.selected.delete(i)));
+      draw();
+    } });
+    all.indeterminate = n > 0 && n < ids.length;
+    return h("details", { class: "section card", open: g.default },
+      h("summary", null, all, h("span", { class: "grow" }, g.name), g.default ? h("span", { class: "badge b-create" }, t("trash_group_default")) : null,
+        h("span", { class: "badge" }, `${n} / ${ids.length}`)),
+      g.description ? h("div", { class: "detail", style: "margin-left:0" }, g.description) : null,
+      h("ul", null, g.formats.map((f) => formatRow(f, false))));
+  };
+
+  const draw = () => {
+    if (T.error) {
+      box.replaceChildren(h("p", { class: "err", style: "margin:0 0 10px" }, T.error), h("button", { onclick: () => load() }, t("retry")));
+      return;
+    }
+    if (!T.profiles) { box.replaceChildren(h("p", { class: "hint", style: "margin:0" }, t("trash_loading"))); return; }
+    const sel = h("select", { onchange: (e) => pick(e.target.value) }, h("option", { value: "" }, t("trash_pick")));
+    for (const cat of [...new Set(T.profiles.map((p) => p.category))]) {
+      sel.append(h("optgroup", { label: cat }, T.profiles.filter((p) => p.category === cat).map((p) => h("option", { value: p.id }, p.name))));
+    }
+    sel.value = T.profileId;
+    const d = T.detail;
+    box.replaceChildren(
+      h("label", { class: "field" }, h("span", null, t("trash_profile")), sel),
+      h("div", { class: "row", style: "margin-bottom:12px" },
+        h("span", { class: "hint grow", style: "margin:0" }, t("trash_updated", new Date(T.fetchedAt * 1000).toLocaleString())),
+        h("button", { onclick: () => load(true) }, t("trash_refresh"))),
+      d ? h("div", null,
+        d.profile.description ? h("p", { class: "hint" }, d.profile.description) : null,
+        h("p", { class: "hint" }, t("trash_hint"), " ", t("trash_count", T.selected.size)),
+        d.required.length ? h("details", { class: "section card" }, h("summary", null, h("span", { class: "grow" }, t("trash_required")), h("span", { class: "badge" }, String(d.required.length))),
+          h("ul", null, d.required.map((f) => formatRow(f, true)))) : null,
+        d.groups.length ? h("h3", { style: "margin:14px 0 8px" }, t("trash_groups")) : null,
+        d.groups.map(groupBlock)) : null);
+  };
+  if (!T.profiles) load();
+  draw();
+  return box;
 }
 
 function importResult() {

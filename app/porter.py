@@ -579,11 +579,9 @@ class Importer:
                     continue
                 items.append({"quality": q, "items": [], "allowed": allowed, **{k: it[k] for k in SIZE_KEYS if it.get(k) is not None}})
                 used.add(it["name"])
-        # qualities that exist on the target only (newer version): keep them, disabled
-        for name, q in qualities.items():
-            if name not in used:
-                items.append({"quality": q, "items": [], "allowed": False})
-        p["items"] = items
+        # qualities the bundle does not mention (newer target version, or a TRaSH profile): keep them, disabled
+        extra = [{"quality": q, "items": [], "allowed": False} for name, q in qualities.items() if name not in used]
+        p["items"] = extra + items if src.get("unlistedQualities") == "first" else items + extra  # "first" = lowest priority
 
         # cutoff: name -> id of the matching group / quality
         cutoff_id = None

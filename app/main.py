@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from .arr import ArrClient, ArrError
 from .porter import Importer, PorterError, export_bundle, parse_bundle
+from .trash import DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, list_profiles, profile_detail, profile_from_catalog
 from .store import InstanceStore, public
 
 mimetypes.add_type("font/woff2", ".woff2")  # not in every base image
@@ -28,6 +29,7 @@ AUTH_USER = os.environ.get("AUTH_USER", "")
 AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "")
 
 store = InstanceStore(CONFIG_DIR / "instances.json")
+catalog = TrashCatalog(CONFIG_DIR / "cache" / "trash-guides.json", os.environ.get("TRASH_GUIDES_URL", DEFAULT_URL))
 backup_dir = CONFIG_DIR / "backups"
 
 app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None)
@@ -102,6 +104,12 @@ class ImportIn(BaseModel):
 
 class ParseIn(BaseModel):
     text: str
+    app: str | None = None  # the target's application: a TRaSH profile needs it to resolve its formats
+
+
+class TrashBuildIn(BaseModel):
+    profile_id: str
+    formats: list[str] | None = None  # trash_ids of the optional formats to include; None = the guides' defaults
 
 
 # --------------------------------------------------------------------------- helpers
@@ -190,7 +198,38 @@ async def parse_import(body: ParseIn):
         data = json.loads(body.text)
     except ValueError as e:
         raise PorterError(f"Invalid JSON: {e}") from e
+    if is_trash_profile(data):
+        if body.app not in ("radarr", "sonarr"):
+            raise PorterError("A TRaSH profile applies to Radarr or Sonarr: choose a target instance of one of them first")
+        return build_bundle(await catalog.load(), body.app, data)
     return parse_bundle(data)
+
+
+@app.get("/api/trash/{app_name}/profiles")
+async def trash_profiles(app_name: str):
+    files = await catalog.load()
+    return {"profiles": list_profiles(files, app_name), "fetchedAt": catalog.fetched_at}
+
+
+@app.get("/api/trash/{app_name}/profiles/{profile_id}")
+async def trash_profile(app_name: str, profile_id: str):
+    files = await catalog.load()
+    detail = profile_detail(files, app_name, profile_from_catalog(files, app_name, profile_id))
+    detail["defaults"] = sorted(default_selection(detail))
+    return detail
+
+
+@app.post("/api/trash/{app_name}/build")
+async def trash_build(app_name: str, body: TrashBuildIn):
+    files = await catalog.load()
+    selected = None if body.formats is None else set(body.formats)
+    return build_bundle(files, app_name, profile_from_catalog(files, app_name, body.profile_id), selected)
+
+
+@app.post("/api/trash/refresh")
+async def trash_refresh():
+    files = await catalog.load(force=True)
+    return {"files": len(files), "fetchedAt": catalog.fetched_at}
 
 
 async def _run_import(iid: str, body: ImportIn, apply: bool) -> dict[str, Any]:

@@ -16,6 +16,7 @@ Petit outil web pour **exporter et importer la configuration de Radarr, Sonarr, 
 | Radarr, Sonarr, Lidarr, Whisparr | Tailles par qualité | min / préféré / max |
 | Radarr, Sonarr, Lidarr, Whisparr | Nommage | |
 | Radarr, Sonarr, Lidarr, Whisparr | Gestion des médias | Décoché par défaut ; les réglages propres à l'hôte (corbeille, permissions) sont exclus |
+| Radarr, Sonarr | Profils [TRaSH Guides](https://trash-guides.info/) | Choisis dans le catalogue ou collés en JSON : formats obligatoires, groupes optionnels, scores du jeu de scores du profil (voir plus bas) |
 | Prowlarr | Profils de synchronisation | |
 | Prowlarr | Indexeurs | Priorité, profil, tags, réglages. **Sans les secrets** (voir ci-dessous) |
 | Prowlarr | Proxys d'indexeurs | FlareSolverr, etc. Sans les secrets |
@@ -42,6 +43,23 @@ Prowlarr masque les clés API, mots de passe et noms d'utilisateur dans son API 
 Les *Applications* (liens Prowlarr → Radarr/Sonarr, qui contiennent des clés API) et les clients de téléchargement ne sont volontairement pas gérés : ils dépendent de votre environnement.
 
 > Lidarr et Prowlarr ont été validés contre une simulation fidèle à leur spécification OpenAPI officielle, Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification) ; aucun n'a encore été essayé sur une vraie instance. Utilisez toujours l'aperçu d'abord, la sauvegarde automatique couvre le reste.
+
+## Profils TRaSH Guides
+
+Un fichier de profil TRaSH ne contient que des *références* : ses formats obligatoires sont cités par nom, et leurs scores se trouvent dans le fichier de chaque format, selon le « jeu de scores » du profil. Portarr s'occupe de tout résoudre :
+
+1. il télécharge **une seule fois** l'archive du [dépôt des guides](https://github.com/TRaSH-Guides/Guides) (environ 25 Mo, dont il ne garde que 1,2 Mo de JSON) et la garde en cache 12 h dans `/config/cache` ;
+2. pour le profil choisi, il rassemble les formats **imposés** et les **groupes optionnels** qui s'y appliquent, avec le score de chacun ; les groupes et formats recommandés par les guides sont cochés d'office ;
+3. il produit un fichier Portarr complet (le profil, ses scores, la définition des formats), qui passe ensuite par le même aperçu et la même sauvegarde automatique que tout import.
+
+Les qualités s'importent dans l'ordre des guides (de la plus haute à la plus basse), et celles que le guide ne mentionne pas sont ajoutées en bas, désactivées.
+
+À savoir :
+
+- **Il faut un accès Internet** la première fois (et pour « Mettre à jour les guides »). Hors ligne, la copie en cache est utilisée même périmée ; sans cache, un message l'explique. Coller des formats personnalisés reste possible sans Internet.
+- **Seulement Radarr et Sonarr** : les guides ne couvrent pas les autres applications.
+- Les tailles par qualité et le nommage des guides ne sont pas encore importés, et le fichier de *conflits* entre formats n'est pas appliqué : lisez la description des groupes (par exemple, ne scorez qu'un seul des deux formats x265).
+- La source du catalogue se change avec `TRASH_GUIDES_URL` (utile pour une copie locale ou un miroir).
 
 ## Installation avec Docker
 
@@ -126,7 +144,8 @@ Onglet **Instances** → *Ajouter*. Utilisez l'adresse que le conteneur peut att
 
 ## Utilisation
 
-- **Appliquer un guide TRaSH** : sur la page du guide, copiez le JSON d'un format personnalisé → onglet **Import** → *Fichier / JSON collé* → choisissez l'instance cible → **Analyser** → **Appliquer**.
+- **Appliquer un profil TRaSH** : onglet **Import** → choisissez l'instance cible (Radarr ou Sonarr) → source *TRaSH Guides* → choisissez le profil, ajustez les groupes de formats → **Analyser** → **Appliquer**.
+- **Coller un JSON TRaSH** : le JSON d'un format personnalisé ou d'un profil de qualité, copié depuis le dépôt ou le site des guides → source *Fichier / JSON collé* → **Analyser** → **Appliquer**.
 - **Copier une configuration d'une instance à une autre** : onglet **Import** → *Une autre instance* → source + cible → **Analyser**. Cocher un profil coche aussi ce dont il dépend (formats notés, profil de synchronisation d'un indexeur).
 - **Archiver / partager** : onglet **Export** → choisir l'instance → **Charger** → cocher → **Télécharger**.
 - **Revenir en arrière** : onglet **Sauvegardes**, puis réimportez le fichier voulu avec « écraser » activé (les éléments créés entre-temps ne sont pas supprimés).
@@ -142,7 +161,8 @@ L'outil détient les clés API de vos instances. Gardez-le sur votre réseau loc
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `PORT` | `8765` | Port d'écoute dans le conteneur |
-| `CONFIG_DIR` | `/config` | Instances (`instances.json`, mode 600) et `backups/` |
+| `CONFIG_DIR` | `/config` | Instances (`instances.json`, mode 600), `backups/` et `cache/` (copie des TRaSH Guides) |
+| `TRASH_GUIDES_URL` | archive GitHub du dépôt TRaSH | Adresse de l'archive `.tar.gz` des guides |
 | `AUTH_USER`, `AUTH_PASSWORD` | vides | Active l'authentification si les deux sont définies |
 
 ## Format du fichier d'export
@@ -173,10 +193,11 @@ La police Inter (licence SIL OFL, voir `app/static/fonts/LICENSE-Inter.txt`) est
 python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004 lidarr-a:7005 lidarr-b:7006 whisparr-a:7007 whisparr-b:7008 prowlarr-a:7009 prowlarr-b:7010
                                                  # faux serveurs de démonstration (clé « demo-key »), un « -a » rempli et un « -b » cible par application
 CONFIG_DIR=./config python -m app                # l'application sur http://localhost:8765
+python -m tests.fake_trash 7100                  # mini dépôt TRaSH hors ligne (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
 
 Le backend est du FastAPI (`app/`), le frontend du JavaScript sans étape de build (`app/static/`). `tests/fake_arr.py` simule en mémoire l'API de Radarr, Sonarr, Whisparr et Lidarr (noms uniques, cutoff valide, IDs de formats, profils de métadonnées) et de Prowlarr (secrets masqués, validation à l'enregistrement, `forceSave`). Les tests couvrent notamment l'aller-retour entre deux instances aux IDs différents, l'idempotence d'un second import et l'absence de secrets dans les exports.
 
 ## Pistes d'évolution
 
-Import des *profils* au format TRaSH (seuls les formats personnalisés sont convertis pour l'instant), profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par le serveur.
+Tailles par qualité et nommage des TRaSH Guides, prise en compte de leur fichier de conflits, profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par le serveur.

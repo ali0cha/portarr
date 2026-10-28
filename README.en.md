@@ -16,6 +16,7 @@ A small web tool to **export and import the configuration of Radarr, Sonarr, Lid
 | Radarr, Sonarr, Lidarr, Whisparr | Quality sizes | min / preferred / max |
 | Radarr, Sonarr, Lidarr, Whisparr | Naming | |
 | Radarr, Sonarr, Lidarr, Whisparr | Media management | Unchecked by default; host-specific settings (recycle bin, permissions) are excluded |
+| Radarr, Sonarr | [TRaSH Guides](https://trash-guides.info/) profiles | Picked from the catalogue or pasted as JSON: mandatory formats, optional groups, scores from the profile's score set (see below) |
 | Prowlarr | Sync profiles | |
 | Prowlarr | Indexers | Priority, profile, tags, settings. **Without secrets** (see below) |
 | Prowlarr | Indexer proxies | FlareSolverr, etc. Without secrets |
@@ -42,6 +43,23 @@ Prowlarr masks API keys, passwords and usernames in its API: they **cannot be ex
 *Applications* (Prowlarr → Radarr/Sonarr links, which contain API keys) and download clients are deliberately not handled: they depend on your environment.
 
 > Lidarr and Prowlarr were validated against a simulation faithful to their official OpenAPI specification, Whisparr against a simulation based on its source code (it does not publish a specification); none has been tried on a real instance yet. Always use the preview first; the automatic backup covers the rest.
+
+## TRaSH Guides profiles
+
+A TRaSH profile file only holds *references*: its mandatory formats are cited by name, and their scores live in each format's own file, depending on the profile's "score set". Portarr resolves all of it:
+
+1. it downloads the [guides' repository](https://github.com/TRaSH-Guides/Guides) archive **once** (about 25 MB, of which it keeps 1.2 MB of JSON) and caches it for 12 hours in `/config/cache`;
+2. for the chosen profile, it gathers the **mandatory** formats and the **optional groups** that apply to it, with each format's score; the groups and formats the guides recommend are ticked by default;
+3. it produces a complete Portarr bundle (the profile, its scores, the formats' definitions), which then goes through the same preview and automatic backup as any import.
+
+Qualities are imported in the guides' order (highest to lowest), and any quality the guide does not mention is added at the bottom, disabled.
+
+Good to know:
+
+- **Internet access is required** the first time (and for "Update the guides"). Offline, the cached copy is used even when outdated; with no cache, a message explains why. Pasting custom formats still works without Internet.
+- **Radarr and Sonarr only**: the guides do not cover the other applications.
+- The guides' quality sizes and naming are not imported yet, and their format *conflicts* file is not enforced: read the groups' descriptions (for example, only score one of the two x265 formats).
+- The catalogue source can be changed with `TRASH_GUIDES_URL` (handy for a local copy or a mirror).
 
 ## Installing with Docker
 
@@ -126,7 +144,8 @@ Then open `http://<truenas-ip>:30290`.
 
 ## Usage
 
-- **Apply a TRaSH guide**: on the guide's page, copy the JSON of a custom format → **Import** tab → *File / pasted JSON* → pick the target instance → **Analyse** → **Apply**.
+- **Apply a TRaSH profile**: **Import** tab → pick the target instance (Radarr or Sonarr) → source *TRaSH Guides* → choose the profile, adjust the format groups → **Analyse** → **Apply**.
+- **Paste TRaSH JSON**: the JSON of a custom format or of a quality profile, copied from the guides' repository or website → source *File / pasted JSON* → **Analyse** → **Apply**.
 - **Copy a setup from one instance to another**: **Import** tab → *Another instance* → source + target → **Analyse**. Ticking a profile also ticks what it depends on (scored formats, an indexer's sync profile).
 - **Archive / share**: **Export** tab → pick the instance → **Load** → tick → **Download**.
 - **Roll back**: **Backups** tab, then re-import the file you want with "overwrite" enabled (items created in the meantime are not deleted).
@@ -142,7 +161,8 @@ The tool holds your instances' API keys. Keep it on your local network and set `
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `8765` | Listening port inside the container |
-| `CONFIG_DIR` | `/config` | Instances (`instances.json`, mode 600) and `backups/` |
+| `CONFIG_DIR` | `/config` | Instances (`instances.json`, mode 600), `backups/` and `cache/` (copy of the TRaSH Guides) |
+| `TRASH_GUIDES_URL` | GitHub archive of the TRaSH repo | Address of the guides' `.tar.gz` archive |
 | `AUTH_USER`, `AUTH_PASSWORD` | empty | Enables authentication when both are set |
 
 ## Export file format
@@ -173,10 +193,11 @@ The Inter font (SIL OFL licence, see `app/static/fonts/LICENSE-Inter.txt`) is bu
 python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004 lidarr-a:7005 lidarr-b:7006 whisparr-a:7007 whisparr-b:7008 prowlarr-a:7009 prowlarr-b:7010
                                                  # demo fake servers (key "demo-key"): a populated "-a" and a target "-b" per application
 CONFIG_DIR=./config python -m app                # the app on http://localhost:8765
+python -m tests.fake_trash 7100                  # offline mini TRaSH repo (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
 
 The backend is FastAPI (`app/`), the frontend is build-free JavaScript (`app/static/`). `tests/fake_arr.py` simulates the Radarr, Sonarr, Whisparr and Lidarr APIs in memory (unique names, valid cutoff, format IDs, metadata profiles) and Prowlarr's (masked secrets, validation on save, `forceSave`). The tests cover in particular the round trip between two instances with different IDs, the idempotence of a second import, and the absence of secrets in exports.
 
 ## Ideas for later
 
-Import of quality *profiles* in TRaSH format (only custom formats are converted for now), delay profiles, release profiles (Sonarr, Lidarr), Readarr, sync with deletion, translation of the messages returned by the server.
+TRaSH Guides quality sizes and naming, honouring their conflicts file, delay profiles, release profiles (Sonarr, Lidarr), Readarr, sync with deletion, translation of the messages returned by the server.
