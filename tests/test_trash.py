@@ -9,8 +9,8 @@ from app import main
 from app.arr import ArrClient
 from app.porter import Importer, PorterError, normalize_profile
 from app.store import InstanceStore
-from app.trash import (TrashCatalog, build_bundle, default_selection, extract_files, is_trash_profile, list_profiles,
-                       profile_detail, profile_from_catalog)
+from app.trash import (TrashCatalog, build_bundle, default_selection, extract_files, is_trash_profile, is_trash_sizes, list_naming,
+                       list_profiles, list_sizes, naming_schemes, profile_detail, profile_from_catalog)
 from tests.fake_arr import Router, make_fake
 from tests.fake_trash import build_files, make_tarball, profile
 
@@ -138,6 +138,63 @@ def test_profile_detection():
     assert not is_trash_profile({"format": "portarr"})
 
 
+# ------------------------------------------------------------------ quality sizes and naming
+
+
+def test_size_sets_are_listed_standard_first(files):
+    assert [(s["name"], s["qualities"]) for s in list_sizes(files, "radarr")] == [("Movies", 3), ("Anime", 1), ("SQP UHD", 1)]
+    assert [s["name"] for s in list_sizes(files, "sonarr")] == ["Series"]
+
+
+def test_naming_schemes_pair_each_file_format_with_its_folder_format(files):
+    radarr = naming_schemes(files, "radarr")
+    assert list(radarr) == ["default", "plex-tmdb", "plex-anime-tmdb", "original", "p2p-scene"]
+    assert radarr["default"] == {"movieFolderFormat": "{Movie CleanTitle} ({Release Year})",
+                                 "standardMovieFormat": "{Movie CleanTitle} {(Release Year)} - {Quality Full}"}
+    assert radarr["plex-tmdb"]["movieFolderFormat"].endswith("{tmdb-{TmdbId}}")
+    assert radarr["plex-anime-tmdb"]["movieFolderFormat"] == radarr["plex-tmdb"]["movieFolderFormat"]  # the anime variant only changes the file
+    assert radarr["original"]["movieFolderFormat"] == radarr["default"]["movieFolderFormat"]  # no folder format of its own: the standard one
+
+    assert [(n["id"], n["name"]) for n in list_naming(files, "radarr")] == [
+        ("default", "Standard"), ("plex-tmdb", "Plex · TMDb"), ("plex-anime-tmdb", "Plex · TMDb (anime)"),
+        ("original", "Original title"), ("p2p-scene", "P2P / scene")]
+
+
+def test_a_sonarr_scheme_sets_the_five_formats_and_keeps_the_standard_ones_where_a_kind_has_no_variant(files):
+    sonarr = naming_schemes(files, "sonarr")
+    assert list(sonarr) == ["default", "jellyfin-tvdb", "original", "p2p-scene"]
+    assert set(sonarr["default"]) == {"seriesFolderFormat", "seasonFolderFormat", "standardEpisodeFormat", "dailyEpisodeFormat", "animeEpisodeFormat"}
+    assert sonarr["jellyfin-tvdb"]["seriesFolderFormat"].endswith("[tvdbid-{TvdbId}]")
+    assert sonarr["jellyfin-tvdb"]["standardEpisodeFormat"] == sonarr["default"]["standardEpisodeFormat"]
+    original = sonarr["original"]
+    assert original["standardEpisodeFormat"] == original["dailyEpisodeFormat"] == "{Original Title}"
+    assert original["animeEpisodeFormat"] == sonarr["default"]["animeEpisodeFormat"]  # the guides have no original format for anime
+    assert sonarr["p2p-scene"]["dailyEpisodeFormat"] == sonarr["default"]["dailyEpisodeFormat"]  # nor a scene format for daily shows
+
+
+def test_a_bundle_can_hold_sizes_and_naming_alone(files):
+    b = build_bundle(files, "radarr", None, None, "SZ-MOVIE", "plex-tmdb")
+    assert b["source"]["profile"] is None and b["customFormats"] == [] and b["qualityProfiles"] == []
+    assert b["qualityDefinitions"][0] == {"quality": "WEBDL-1080p", "minSize": 12.5, "preferredSize": 1999, "maxSize": 2000}
+    assert set(b["naming"]) == {"movieFolderFormat", "standardMovieFormat"}
+
+    both = build_bundle(files, "radarr", profile_from_catalog(files, "radarr", "P1"), None, "SZ-MOVIE")
+    assert both["qualityProfiles"] and both["qualityDefinitions"] and "naming" not in both
+
+    with pytest.raises(PorterError, match="Choose a TRaSH profile"):
+        build_bundle(files, "radarr")
+    with pytest.raises(PorterError, match="Unknown TRaSH quality sizes"):
+        build_bundle(files, "radarr", None, None, "SZ-SERIES")  # a Sonarr set on Radarr
+    with pytest.raises(PorterError, match="Unknown TRaSH naming scheme"):
+        build_bundle(files, "radarr", None, None, None, "jellyfin-tvdb")
+
+
+def test_sizes_detection():
+    assert is_trash_sizes({"trash_id": "x", "type": "movie", "qualities": []})
+    assert not is_trash_sizes(profile("P1", "x"))
+    assert not is_trash_sizes({"format": "portarr"})
+
+
 # ------------------------------------------------------------------ importing it
 
 
@@ -222,4 +279,69 @@ def test_pasted_trash_profile_json_is_resolved_against_the_guides(client):
     assert ok.json()["qualityProfiles"][0]["name"] == "HD Bluray + WEB"
     no_app = client.post("/api/import/parse", json={"text": text})
     assert no_app.status_code == 400 and "choose a target instance" in no_app.json()["detail"]
+    assert client.post("/api/import/parse", json={"text": text, "app": "lidarr"}).status_code == 400
+
+
+# ------------------------------------------------------------------ importing sizes and naming
+
+
+def test_imported_sizes_set_the_three_limits_and_report_unknown_qualities(files, radarr):
+    bundle = build_bundle(files, "radarr", None, None, "SZ-MOVIE")
+    plan = run(do_import("dst", "kb", bundle))
+    items = {i["name"]: i for i in plan["sections"]["qualityDefinitions"]}
+    assert items["WEBDL-1080p"]["action"] == "update"
+    assert "minSize: 0.0 → 12.5" in items["WEBDL-1080p"]["changes"] and "maxSize: 100.0 → 2000" in items["WEBDL-1080p"]["changes"]
+    assert items["Bluray-2160p"]["action"] == "skip" and "Quality unknown" in items["Bluray-2160p"]["warnings"][0]
+
+    run(do_import("dst", "kb", bundle, apply=True))
+    by_name = {d["quality"]["name"]: d for d in radarr["dst"].state.db["defs"]}
+    assert (by_name["Bluray-1080p"]["minSize"], by_name["Bluray-1080p"]["preferredSize"], by_name["Bluray-1080p"]["maxSize"]) == (50.8, 1999, 2000)
+    assert by_name["HDTV-720p"]["maxSize"] == 100.0  # not in the set: untouched
+    again = run(do_import("dst", "kb", bundle))
+    assert again["summary"]["update"] == 0
+
+
+def test_imported_naming_changes_only_the_formats_and_warns_when_renaming_is_off(files, radarr):
+    db = radarr["dst"].state.db
+    db["naming"].update(renameMovies=False, movieFolderFormat="{Movie Title}")  # the fake only has the file format by default
+    bundle = build_bundle(files, "radarr", None, None, None, "plex-tmdb")
+    plan = run(do_import("dst", "kb", bundle))
+    naming = plan["sections"]["naming"][0]
+    assert naming["action"] == "update" and len(naming["changes"]) == 2
+    assert any("Renaming is turned off" in w for w in naming["warnings"])
+
+    run(do_import("dst", "kb", bundle, apply=True))
+    assert db["naming"]["standardMovieFormat"].startswith("{Movie CleanTitle} {(Release Year)} {tmdb-")
+    assert db["naming"]["colonReplacementFormat"] == "delete" and db["naming"]["renameMovies"] is False  # nothing else touched
+
+    db["naming"]["renameMovies"] = True
+    again = run(do_import("dst", "kb", bundle))
+    assert again["sections"]["naming"][0]["action"] == "unchanged" and again["sections"]["naming"][0]["warnings"] == []
+
+
+def test_sonarr_naming_ignores_settings_an_older_sonarr_lacks(files, radarr):
+    bundle = build_bundle(files, "sonarr", None, None, "SZ-SERIES", "default")
+    plan = run(do_import("sonarr", "ks", bundle))
+    item = plan["sections"]["naming"][0]
+    assert any("unknown on the target" in w and "seriesFolderFormat" in w for w in item["warnings"])  # the fake only has the standard format
+    assert any("standardEpisodeFormat" in c for c in item["changes"])
+
+
+def test_sizes_and_naming_through_the_api(client):
+    r = client.get("/api/trash/radarr/profiles").json()
+    assert [s["name"] for s in r["sizes"]] == ["Movies", "Anime", "SQP UHD"]
+    assert r["naming"][0]["id"] == "default" and "standardMovieFormat" in r["naming"][0]["formats"]  # the UI shows the formats it will set
+
+    only = client.post("/api/trash/radarr/build", json={"sizes": "SZ-MOVIE", "naming": "plex-tmdb"})
+    assert only.status_code == 200 and only.json()["qualityProfiles"] == [] and len(only.json()["qualityDefinitions"]) == 3
+    nothing = client.post("/api/trash/radarr/build", json={})
+    assert nothing.status_code == 400 and "Choose a TRaSH profile" in nothing.json()["detail"]
+    assert client.post("/api/trash/radarr/build", json={"sizes": "nope"}).status_code == 400
+
+
+def test_a_pasted_trash_size_file_becomes_a_bundle(client):
+    text = json.dumps(build_files()["sonarr/quality-size/series.json"])
+    ok = client.post("/api/import/parse", json={"text": text, "app": "sonarr"})
+    assert ok.status_code == 200 and ok.json()["qualityDefinitions"][0] == {"quality": "WEBDL-1080p", "minSize": 15, "preferredSize": 995, "maxSize": 1000}
+    assert client.post("/api/import/parse", json={"text": text}).status_code == 400
     assert client.post("/api/import/parse", json={"text": text, "app": "lidarr"}).status_code == 400

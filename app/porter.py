@@ -25,6 +25,7 @@ CONFIG_PATHS = {"naming": "config/naming", "mediaManagement": "config/mediamanag
 # Settings that are specific to the host / filesystem rather than to a quality setup.
 CONFIG_SKIP_KEYS = {"id", "recycleBin", "chmodFolder", "chownGroup", "setPermissionsLinux"}
 SCORE_KEYS = ("minFormatScore", "cutoffFormatScore", "minUpgradeFormatScore")
+RENAME_KEYS = ("renameMovies", "renameEpisodes", "renameTracks")  # the switch that makes the naming formats count
 GROUP_ID_START = 1000
 # Lidarr metadata profile lists: key -> name of the sub-object holding the type
 META_LISTS = (("primaryAlbumTypes", "albumType"), ("secondaryAlbumTypes", "albumType"), ("releaseStatuses", "releaseStatus"))
@@ -676,6 +677,8 @@ class Importer:
                 new[k] = v
         if ignored:
             item["warnings"].append("Settings unknown on the target, ignored: " + ", ".join(ignored))
+        if section == "naming" and item["changes"] and any(cur.get(k) is False and k not in src for k in RENAME_KEYS):
+            item["warnings"].append("Renaming is turned off on the target: these formats apply once you enable it in Settings → Media Management")
         if item["changes"]:
             item["action"] = "update"
             item["_exec"] = partial(self.client.put, f"{path}/{cur['id']}", new)

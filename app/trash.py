@@ -198,9 +198,142 @@ def default_selection(detail: dict[str, Any]) -> set[str]:
     return chosen
 
 
-def build_bundle(files: dict[str, Any], app: str, profile: dict[str, Any], selected: set[str] | None = None) -> dict[str, Any]:
-    """A Portarr bundle: the profile with its scores, and the definitions of the formats it scores."""
+# --------------------------------------------------------------------------- quality sizes
+
+
+def _title(slug: str) -> str:
+    named = {"movie": "Movies", "series": "Series"}
+    return named.get(slug) or " ".join(w.upper() if w in ("sqp", "uhd") else w.capitalize() for w in slug.split("-"))
+
+
+def is_trash_sizes(data: Any) -> bool:
+    return (isinstance(data, dict) and "trash_id" in data and isinstance(data.get("qualities"), list)
+            and "items" not in data and "specifications" not in data)
+
+
+def list_sizes(files: dict[str, Any], app: str) -> list[dict[str, Any]]:
+    """The guides' size sets (per quality: minimum, preferred and maximum, in MB per minute of runtime)."""
     _check_app(app)
+    sets = [s for s in _dir(files, app, "quality-size") if is_trash_sizes(s)]
+    sets.sort(key=lambda s: (s.get("type") not in ("movie", "series"), str(s.get("type"))))
+    return [{"id": s["trash_id"], "name": _title(str(s.get("type") or "sizes")), "qualities": len(s["qualities"])} for s in sets]
+
+
+def find_sizes(files: dict[str, Any], app: str, sizes_id: str) -> dict[str, Any]:
+    _check_app(app)
+    for s in _dir(files, app, "quality-size"):
+        if s.get("trash_id") == sizes_id and is_trash_sizes(s):
+            return s
+    raise PorterError("Unknown TRaSH quality sizes")
+
+
+def size_definitions(sizes: dict[str, Any]) -> list[dict[str, Any]]:
+    out = []
+    for q in sizes["qualities"]:
+        if not isinstance(q, dict) or not q.get("quality"):
+            continue
+        out.append({"quality": q["quality"], **{k: q[src] for k, src in
+                                                (("minSize", "min"), ("preferredSize", "preferred"), ("maxSize", "max")) if q.get(src) is not None}})
+    return out
+
+
+# --------------------------------------------------------------------------- naming
+
+# format setting of each application -> where the guides keep it
+SERVERS = {"plex": "Plex", "emby": "Emby", "jellyfin": "Jellyfin"}
+IDS = {"imdb": "IMDb", "tmdb": "TMDb", "tvdb": "TVDb"}
+SPECIAL = {"default": "Standard", "standard": "Standard", "original": "Original title", "p2p-scene": "P2P / scene"}
+
+
+def _naming_label(key: str) -> str:
+    if key in SPECIAL:
+        return SPECIAL[key]
+    parts = key.split("-")
+    server, ident = SERVERS.get(parts[0]), IDS.get(parts[-1])
+    if not server or not ident:
+        return key
+    extra = {"anime": "anime", "edition-alt": "alternative edition"}.get("-".join(parts[1:-1]))
+    return f"{server} · {ident}" + (f" ({extra})" if extra else "")
+
+
+def _plain_key(key: str) -> str:
+    """The folder format that goes with a file format: variants only differ in the file name."""
+    return key.replace("-anime", "").replace("-edition-alt", "")
+
+
+def _naming_file(files: dict[str, Any], app: str) -> dict[str, Any]:
+    for n in _dir(files, app, "naming"):
+        return n
+    raise PorterError("The TRaSH Guides have no naming scheme for this application")
+
+
+def naming_schemes(files: dict[str, Any], app: str) -> dict[str, dict[str, str]]:
+    """Every naming scheme of the guides, as the settings it sets: {scheme id: {setting: format}}."""
+    _check_app(app)
+    n = _naming_file(files, app)
+    out: dict[str, dict[str, str]] = {}
+    if app == "radarr":
+        folders, names = n.get("folder") or {}, n.get("file") or {}
+        for key, fmt in names.items():
+            folder = folders.get(_plain_key("default" if key == "standard" else key)) or folders.get("default")
+            out["default" if key == "standard" else key] = {"movieFolderFormat": folder, "standardMovieFormat": fmt}
+    else:
+        series, season, eps = n.get("series") or {}, n.get("season") or {}, n.get("episodes") or {}
+        std, daily, anime = (eps.get(k) or {} for k in ("standard", "daily", "anime"))
+        for key in series:
+            out[key] = {"seriesFolderFormat": series[key], "seasonFolderFormat": season.get("default"),
+                        "standardEpisodeFormat": std.get("default"), "dailyEpisodeFormat": daily.get("default"),
+                        "animeEpisodeFormat": anime.get("default")}
+        for key in ("original", "p2p-scene"):  # not every kind of episode has them: it keeps the standard format there
+            if any(key in e for e in (std, daily, anime)):
+                out[key] = {**out["default"], "standardEpisodeFormat": std.get(key) or std.get("default"),
+                            "dailyEpisodeFormat": daily.get(key) or daily.get("default"),
+                            "animeEpisodeFormat": anime.get(key) or anime.get("default")}
+    return {k: {s: f for s, f in v.items() if isinstance(f, str) and f} for k, v in out.items()}
+
+
+def list_naming(files: dict[str, Any], app: str) -> list[dict[str, Any]]:
+    schemes = naming_schemes(files, app)
+    keys = list(schemes)
+    order = sorted(keys, key=lambda k: (k != "default", k in ("original", "p2p-scene"), keys.index(k)))  # standard first, odd ones last
+    return [{"id": k, "name": _naming_label(k), "formats": schemes[k]} for k in order]
+
+
+def find_naming(files: dict[str, Any], app: str, scheme: str) -> dict[str, str]:
+    schemes = naming_schemes(files, app)
+    if scheme not in schemes:
+        raise PorterError("Unknown TRaSH naming scheme")
+    return schemes[scheme]
+
+
+# --------------------------------------------------------------------------- bundles
+
+
+def build_bundle(files: dict[str, Any], app: str, profile: dict[str, Any] | None = None, selected: set[str] | None = None,
+                 sizes: str | None = None, naming: str | None = None) -> dict[str, Any]:
+    """A Portarr bundle made of what the guides recommend: a quality profile with its scores and the formats it
+    scores, a set of quality sizes, a naming scheme. Each one is optional, but not all three."""
+    _check_app(app)
+    if profile is None and not sizes and not naming:
+        raise PorterError("Choose a TRaSH profile, quality sizes or a naming scheme")
+    bundle: dict[str, Any] = {
+        "format": FORMAT,
+        "version": VERSION,
+        "source": {"app": app, "origin": "trash-guides", "profile": profile["name"] if profile else None, "version": None},
+        "customFormats": [],
+        "qualityProfiles": [],
+        "warnings": [],
+    }
+    if profile is not None:
+        _add_profile(bundle, files, app, profile, selected)
+    if sizes:
+        bundle["qualityDefinitions"] = size_definitions(find_sizes(files, app, sizes))
+    if naming:
+        bundle["naming"] = find_naming(files, app, naming)
+    return bundle
+
+
+def _add_profile(bundle: dict[str, Any], files: dict[str, Any], app: str, profile: dict[str, Any], selected: set[str] | None) -> None:
     detail = profile_detail(files, app, profile)
     allowed = {r["trash_id"] for r in detail["required"]} | {f["trash_id"] for g in detail["groups"] for f in g["formats"]}
     chosen = default_selection(detail) if selected is None else (set(selected) & allowed) | {r["trash_id"] for r in detail["required"]}
@@ -222,14 +355,9 @@ def build_bundle(files: dict[str, Any], app: str, profile: dict[str, Any], selec
             prof[k] = profile[k]
     if profile.get("language"):
         prof["language"] = profile["language"]
-    return {
-        "format": FORMAT,
-        "version": VERSION,
-        "source": {"app": app, "origin": "trash-guides", "profile": profile["name"], "version": None},
-        "customFormats": [normalize_cf(c) for c in ordered],
-        "qualityProfiles": [prof],
-        "warnings": [f"Custom format '{n}' is referenced by the guides but its file was not found" for n in detail["missing"]],
-    }
+    bundle["customFormats"] = [normalize_cf(c) for c in ordered]
+    bundle["qualityProfiles"] = [prof]
+    bundle["warnings"] = [f"Custom format '{n}' is referenced by the guides but its file was not found" for n in detail["missing"]]
 
 
 def profile_from_catalog(files: dict[str, Any], app: str, profile_id: str) -> dict[str, Any]:

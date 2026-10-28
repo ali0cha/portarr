@@ -81,9 +81,12 @@ def main() -> None:
         page.wait_for_selector("optgroup", state="attached")
         page.locator("#view select").filter(has=page.locator("optgroup")).select_option(label="HD Bluray + WEB")
         page.wait_for_selector("#view details.section")
+        # the same panel offers a set of quality sizes and a naming scheme (their ids are those of the guides)
+        page.locator("#view select").filter(has=page.locator("option[value='aed34b9f60ee115dfa7918b742336277']")).select_option("aed34b9f60ee115dfa7918b742336277")
+        page.locator("#view select").filter(has=page.locator("option[value='plex-tmdb']")).select_option("plex-tmdb")
         page.wait_for_timeout(500)
         scroll_to(".seg", offset=95)
-        shot("03-trash-profile")
+        shot("03-trash-profile", TALL)
 
         # 4. review every change before anything is written
         page.evaluate("document.querySelector('.content').scrollTop = 0")

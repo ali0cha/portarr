@@ -20,8 +20,9 @@ from pydantic import BaseModel
 
 from . import __version__
 from .arr import ArrClient, ArrError
-from .porter import Importer, PorterError, export_bundle, parse_bundle
-from .trash import DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, list_profiles, profile_detail, profile_from_catalog
+from .porter import FORMAT, VERSION, Importer, PorterError, export_bundle, parse_bundle
+from .trash import (DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, is_trash_sizes, list_naming,
+                    list_profiles, list_sizes, profile_detail, profile_from_catalog, size_definitions)
 from .store import InstanceStore, public
 from .updates import UpdateChecker
 
@@ -125,8 +126,10 @@ class ParseIn(BaseModel):
 
 
 class TrashBuildIn(BaseModel):
-    profile_id: str
+    profile_id: str | None = None  # a bundle needs at least one of: a profile, quality sizes, a naming scheme
     formats: list[str] | None = None  # trash_ids of the optional formats to include; None = the guides' defaults
+    sizes: str | None = None  # trash_id of a set of quality sizes
+    naming: str | None = None  # id of a naming scheme
 
 
 # --------------------------------------------------------------------------- helpers
@@ -229,13 +232,19 @@ async def parse_import(body: ParseIn):
         if body.app not in ("radarr", "sonarr"):
             raise PorterError("A TRaSH profile applies to Radarr or Sonarr: choose a target instance of one of them first")
         return build_bundle(await catalog.load(), body.app, data)
+    if is_trash_sizes(data):  # a size file needs no catalog: it is complete by itself
+        if body.app not in ("radarr", "sonarr"):
+            raise PorterError("TRaSH quality sizes apply to Radarr or Sonarr: choose a target instance of one of them first")
+        return {"format": FORMAT, "version": VERSION, "source": {"app": body.app, "origin": "trash-guides", "profile": None, "version": None},
+                "qualityDefinitions": size_definitions(data)}
     return parse_bundle(data)
 
 
 @app.get("/api/trash/{app_name}/profiles")
 async def trash_profiles(app_name: str):
     files = await catalog.load()
-    return {"profiles": list_profiles(files, app_name), "fetchedAt": catalog.fetched_at}
+    return {"profiles": list_profiles(files, app_name), "sizes": list_sizes(files, app_name),
+            "naming": list_naming(files, app_name), "fetchedAt": catalog.fetched_at}
 
 
 @app.get("/api/trash/{app_name}/profiles/{profile_id}")
@@ -250,7 +259,8 @@ async def trash_profile(app_name: str, profile_id: str):
 async def trash_build(app_name: str, body: TrashBuildIn):
     files = await catalog.load()
     selected = None if body.formats is None else set(body.formats)
-    return build_bundle(files, app_name, profile_from_catalog(files, app_name, body.profile_id), selected)
+    profile = profile_from_catalog(files, app_name, body.profile_id) if body.profile_id else None
+    return build_bundle(files, app_name, profile, selected, body.sizes, body.naming)
 
 
 @app.post("/api/trash/refresh")

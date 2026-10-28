@@ -198,6 +198,8 @@ input[type=text], input[type=password], input[type=url], select, textarea {
   box-shadow: inset 0 1px 1px var(--cardShadow);
 }
 textarea { min-height: 120px; font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+pre.formats { margin: -4px 0 12px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 4px; background: var(--paper); color: var(--inkMuted);
+  font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
 input[type=checkbox] { accent-color: var(--accentDeep); width: 16px; height: 16px; flex: none; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focusRing); }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

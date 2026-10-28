@@ -13,7 +13,7 @@ Portarr is a small web tool that **exports and imports the quality configuration
 | Application | What you can export and import |
 |---|---|
 | Radarr, Sonarr, Lidarr, Whisparr | Custom formats, quality profiles (scores, groups, cutoff, language), quality sizes, naming, media management |
-| Radarr, Sonarr | [TRaSH Guides](https://trash-guides.info/) profiles, picked from the catalogue or pasted as JSON |
+| Radarr, Sonarr | [TRaSH Guides](https://trash-guides.info/) profiles, quality sizes and naming schemes, picked from the catalogue or pasted as JSON |
 | Lidarr | Metadata profiles (album types and release statuses) |
 | Prowlarr | Sync profiles, indexers, indexer proxies |
 
@@ -43,9 +43,9 @@ The instances below are simulated, so no real data is shown.
 
 <img src="docs/screenshots/en/02-export.png" alt="Choosing what to export from a Radarr instance" width="860">
 
-**Import from the TRaSH Guides**: pick a profile and adjust its optional format groups:
+**Import from the TRaSH Guides**: pick a profile and adjust its optional format groups, and optionally a set of quality sizes and a naming scheme:
 
-<img src="docs/screenshots/en/03-trash-profile.png" alt="Choosing a TRaSH Guides profile with its mandatory formats and optional groups" width="860">
+<img src="docs/screenshots/en/03-trash-profile.png" alt="Choosing a TRaSH Guides profile, quality sizes and naming scheme, with the profile's mandatory formats and optional groups" width="860">
 
 **Done**: the summary, and the automatic backup of the target made right before writing:
 
@@ -114,7 +114,7 @@ Every task is a step-by-step path (the indicator is at the top), and **all actio
 
 *Overwrite existing items* applies to items matched by name: custom formats, quality profiles, sync profiles, indexers and proxies. Quality sizes, naming and media management are always updated when ticked.
 
-### TRaSH Guides profiles
+### TRaSH Guides profiles, sizes and naming
 
 A TRaSH profile only holds *references*: its mandatory formats are named, and their scores live in each format's own file under the profile's *score set*. Portarr resolves all of it:
 
@@ -124,9 +124,14 @@ A TRaSH profile only holds *references*: its mandatory formats are named, and th
 
 Qualities keep the guides' order, and any quality the guide doesn't mention is added at the bottom, disabled.
 
+The three choices are independent, and each one can be left on *None*: you can import only a profile, only the sizes, or only the naming.
+
+- **Quality sizes** are the guides' minimum, preferred and maximum size of each quality (MB per minute of runtime), in one set per kind of library: movies, anime, the SQP profiles for Radarr; series and anime for Sonarr. Qualities the set doesn't list keep their current sizes, and qualities the target doesn't know are skipped with a note.
+- **Naming scheme** sets the folder and file name formats for the media server you use (Plex, Emby or Jellyfin, with IMDb, TMDb or TVDb IDs), or the guides' *original title* and *P2P / scene* variants. The formats it will set are shown before you continue. It never switches renaming on: if renaming is off on the target, the preview says so.
+
 - **Internet access is needed** the first time and for *Update the guides*. Offline, the cached copy is used even if outdated. Pasting custom formats works offline.
 - **Radarr and Sonarr only**: the guides cover nothing else.
-- The guides' quality sizes and naming are not imported yet, and their *conflicts* file is not enforced. Read each group's description (for example, score only one of the two x265 formats).
+- The guides' *conflicts* file is not enforced. Read each group's description (for example, score only one of the two x265 formats).
 - `TRASH_GUIDES_URL` points to another archive, such as a mirror.
 
 ### Prowlarr indexer secrets
@@ -215,4 +220,4 @@ Portarr is released under the [MIT License](LICENSE). The changes of each releas
 
 ## Ideas for later
 
-TRaSH quality sizes and naming, honouring the TRaSH conflicts file, delay profiles, release profiles (Sonarr, Lidarr), Readarr, sync with deletion, translating the messages returned by the servers.
+Honouring the TRaSH conflicts file, delay profiles, release profiles (Sonarr, Lidarr), Readarr, sync with deletion, translating the messages returned by the servers.

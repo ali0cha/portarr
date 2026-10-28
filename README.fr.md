@@ -13,7 +13,7 @@ Portarr est un petit outil web qui **exporte et importe la configuration qualit�
 | Application | Ce qu'on peut exporter et importer |
 |---|---|
 | Radarr, Sonarr, Lidarr, Whisparr | Formats personnalisés, profils de qualité (scores, groupes, cutoff, langue), tailles par qualité, nommage, gestion des médias |
-| Radarr, Sonarr | Profils des [TRaSH Guides](https://trash-guides.info/), choisis dans le catalogue ou collés en JSON |
+| Radarr, Sonarr | Profils, tailles par qualité et schémas de nommage des [TRaSH Guides](https://trash-guides.info/), choisis dans le catalogue ou collés en JSON |
 | Lidarr | Profils de métadonnées (types d'albums et statuts de sortie) |
 | Prowlarr | Profils de synchronisation, indexeurs, proxys d'indexeurs |
 
@@ -43,9 +43,9 @@ Les instances ci-dessous sont simulées : aucune donnée réelle n'est affichée
 
 <img src="docs/screenshots/fr/02-export.png" alt="Choix de ce qu'il faut exporter depuis une instance Radarr" width="860">
 
-**Import depuis les TRaSH Guides** : choisissez un profil et ajustez ses groupes de formats optionnels :
+**Import depuis les TRaSH Guides** : choisissez un profil et ajustez ses groupes de formats optionnels, puis éventuellement un jeu de tailles par qualité et un schéma de nommage :
 
-<img src="docs/screenshots/fr/03-trash-profile.png" alt="Choix d'un profil TRaSH Guides avec ses formats imposés et ses groupes optionnels" width="860">
+<img src="docs/screenshots/fr/03-trash-profile.png" alt="Choix d'un profil, de tailles par qualité et d'un schéma de nommage TRaSH Guides, avec les formats imposés et les groupes optionnels du profil" width="860">
 
 **Terminé** : le résumé, et la sauvegarde automatique de la cible faite juste avant d'écrire :
 
@@ -114,7 +114,7 @@ Chaque tâche est un parcours en étapes (l'indicateur est en haut), et **toutes
 
 *Écraser les éléments existants* concerne les éléments appariés par nom : formats personnalisés, profils de qualité, profils de synchronisation, indexeurs et proxys. Les tailles par qualité, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.
 
-### Profils TRaSH Guides
+### Profils, tailles et nommage TRaSH Guides
 
 Un profil TRaSH ne contient que des *références* : ses formats obligatoires sont nommés, et leurs scores se trouvent dans le fichier de chaque format, selon le *jeu de scores* du profil. Portarr résout tout cela :
 
@@ -124,9 +124,14 @@ Un profil TRaSH ne contient que des *références* : ses formats obligatoires so
 
 Les qualités gardent l'ordre des guides, et toute qualité que le guide ne mentionne pas est ajoutée en bas, désactivée.
 
+Les trois choix sont indépendants, et chacun peut rester sur *Aucun* : vous pouvez n'importer qu'un profil, que les tailles, ou que le nommage.
+
+- **Les tailles par qualité** sont la taille minimale, préférée et maximale de chaque qualité selon les guides (Mo par minute de durée), en un jeu par type de bibliothèque : films, anime, profils SQP pour Radarr ; séries et anime pour Sonarr. Les qualités que le jeu ne liste pas gardent leurs tailles actuelles, et celles que la cible ne connaît pas sont ignorées avec une remarque.
+- **Le schéma de nommage** règle les formats de nom des dossiers et des fichiers pour le serveur multimédia que vous utilisez (Plex, Emby ou Jellyfin, avec des identifiants IMDb, TMDb ou TVDb), ou les variantes *titre original* et *P2P / scene* des guides. Les formats qu'il applique sont affichés avant de continuer. Il n'active jamais le renommage : s'il est désactivé sur la cible, l'aperçu le signale.
+
 - **Un accès Internet est nécessaire** la première fois et pour *Mettre à jour les guides*. Hors ligne, la copie en cache est utilisée même périmée. Coller des formats personnalisés fonctionne hors ligne.
 - **Radarr et Sonarr uniquement** : les guides ne couvrent rien d'autre.
-- Les tailles par qualité et le nommage des guides ne sont pas encore importés, et leur fichier de *conflits* n'est pas appliqué. Lisez la description de chaque groupe (par exemple, ne scorez qu'un seul des deux formats x265).
+- Le fichier de *conflits* des guides n'est pas appliqué. Lisez la description de chaque groupe (par exemple, ne scorez qu'un seul des deux formats x265).
 - `TRASH_GUIDES_URL` désigne une autre archive, par exemple un miroir.
 
 ### Secrets des indexeurs Prowlarr
@@ -215,4 +220,4 @@ Portarr est publié sous [licence MIT](LICENSE). Les changements de chaque versi
 
 ## Pistes d'évolution
 
-Tailles par qualité et nommage TRaSH, prise en compte du fichier de conflits TRaSH, profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par les serveurs.
+Prise en compte du fichier de conflits TRaSH, profils de délai, release profiles (Sonarr, Lidarr), Readarr, synchronisation avec suppression, traduction des messages renvoyés par les serveurs.

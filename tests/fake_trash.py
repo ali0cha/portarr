@@ -67,6 +67,29 @@ def build_files() -> dict[str, Any]:
         "sonarr/quality-profiles/web-1080p.json": {**profile("S1", "WEB-1080p"), "language": None, "formatItems": {"BR-DISK": "scf-br"}},
         "sonarr/cf/br-disk.json": cf("scf-br", "BR-DISK", {"default": -10000}, "BR.?DISK"),
     }
+    sizes = lambda tid, kind, rows: {"trash_id": tid, "type": kind, "qualities": [
+        {"quality": n, "min": lo, "preferred": mid, "max": hi} for n, lo, mid, hi in rows]}
+    radarr.update({
+        "radarr/quality-size/movie.json": sizes("SZ-MOVIE", "movie", [
+            ("WEBDL-1080p", 12.5, 1999, 2000), ("Bluray-1080p", 50.8, 1999, 2000), ("Bluray-2160p", 102, 1999, 2000)]),  # 2160p Blu-ray: not on the fake
+        "radarr/quality-size/sqp-uhd.json": sizes("SZ-UHD", "sqp-uhd", [("WEBDL-2160p", 34.5, 1999, 2000)]),
+        "radarr/quality-size/anime.json": sizes("SZ-ANIME", "anime", [("WEBDL-720p", 5, 100, 200)]),
+        "radarr/naming/radarr-naming.json": {
+            "folder": {"default": "{Movie CleanTitle} ({Release Year})", "plex-tmdb": "{Movie CleanTitle} ({Release Year}) {tmdb-{TmdbId}}"},
+            "file": {"standard": "{Movie CleanTitle} {(Release Year)} - {Quality Full}",
+                     "plex-tmdb": "{Movie CleanTitle} {(Release Year)} {tmdb-{TmdbId}} - {edition-{Edition Tags}} {Quality Full}",
+                     "plex-anime-tmdb": "{Movie CleanTitle} {tmdb-{TmdbId}} {MediaInfo AudioLanguages}",
+                     "original": "{Original Title}", "p2p-scene": "{Movie.CleanTitle}{.Release.Year}"}},
+    })
+    sonarr.update({
+        "sonarr/quality-size/series.json": sizes("SZ-SERIES", "series", [("WEBDL-1080p", 15, 995, 1000), ("HDTV-720p", 10, 995, 1000)]),
+        "sonarr/naming/sonarr-naming.json": {
+            "season": {"default": "Season {season:00}"},
+            "series": {"default": "{Series CleanTitleWithoutYear}", "jellyfin-tvdb": "{Series CleanTitleWithoutYear} [tvdbid-{TvdbId}]"},
+            "episodes": {"standard": {"default": "{Series} - S{season:00}E{episode:00}", "original": "{Original Title}", "p2p-scene": "{Series.CleanTitleYear}.S{season:00}E{episode:00}"},
+                         "daily": {"default": "{Series} - {Air-Date}", "original": "{Original Title}"},
+                         "anime": {"default": "{Series} - {absolute:000}"}}},
+    })
     return {**radarr, **sonarr}
 
 

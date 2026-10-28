@@ -53,10 +53,12 @@ const I18N = {
     inst_add_tile: "Add an instance", tls_off: "TLS certificate not verified", build_title: "Built from commit {0}",
     imp_no_same_app: "There is no other {0} instance to copy from. Add one in Instances, or use a file.",
     src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
-    trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_pick: "Choose a profile…",
+    trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_none: "None, leave unchanged",
+    trash_sizes: "Quality sizes", trash_sizes_hint: "Minimum, preferred and maximum size of each quality, in MB per minute. Qualities the set does not list stay as they are.",
+    trash_naming: "Naming scheme", trash_naming_hint: "The folder and file name formats. Whether files get renamed at all stays your setting on the target.", trash_q: "{0} qualities",
     trash_required: "Required by the profile", trash_groups: "Optional format groups", trash_group_default: "recommended", trash_req: "required",
     trash_updated: "Guides downloaded on {0}", trash_refresh: "Update the guides", trash_count: "{0} formats selected", retry: "Retry",
-    need_profile: "Choose a TRaSH profile first", trash_hint: "Scores come from the profile's score set. Ticked groups are the guides' recommendation; adjust freely, the preview comes next.",
+    need_profile: "Choose a profile, quality sizes or a naming scheme first", trash_hint: "Scores come from the profile's score set. Ticked groups are the guides' recommendation; adjust freely, the preview comes next.",
   },
   fr: {
     tab_instances: "Instances", tab_export: "Export", tab_import: "Import", tab_backups: "Sauvegardes",
@@ -109,10 +111,12 @@ const I18N = {
     inst_add_tile: "Ajouter une instance", tls_off: "certificat TLS non vérifié", build_title: "Construit depuis le commit {0}",
     imp_no_same_app: "Il n'y a pas d'autre instance {0} à copier. Ajoutez-en une dans Instances, ou utilisez un fichier.",
     src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
-    trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_pick: "Choisir un profil…",
+    trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_none: "Aucun, ne rien changer",
+    trash_sizes: "Tailles par qualité", trash_sizes_hint: "Taille minimale, préférée et maximale de chaque qualité, en Mo par minute. Les qualités que le jeu ne liste pas restent telles quelles.",
+    trash_naming: "Schéma de nommage", trash_naming_hint: "Les formats de nom des dossiers et des fichiers. Le fait de renommer ou non les fichiers reste votre réglage sur la cible.", trash_q: "{0} qualités",
     trash_required: "Imposés par le profil", trash_groups: "Groupes de formats optionnels", trash_group_default: "recommandé", trash_req: "requis",
     trash_updated: "Guides téléchargés le {0}", trash_refresh: "Mettre à jour les guides", trash_count: "{0} formats sélectionnés", retry: "Réessayer",
-    need_profile: "Choisissez d'abord un profil TRaSH", trash_hint: "Les scores viennent du jeu de scores du profil. Les groupes cochés sont la recommandation des guides ; ajustez librement, l'aperçu vient ensuite.",
+    need_profile: "Choisissez d'abord un profil, des tailles ou un schéma de nommage", trash_hint: "Les scores viennent du jeu de scores du profil. Les groupes cochés sont la recommandation des guides ; ajustez librement, l'aperçu vient ensuite.",
   },
 };
 const LANGS = { fr: "Français", en: "English" };
@@ -262,7 +266,7 @@ const S = {
   update: null, // {available, latest, current, url}, from /api/update
   exp: { id: "", bundle: null, sel: {}, error: null, saved: null },
   imp: { step: 1, mode: "file", text: "", fileName: "", sourceLabel: "", srcId: "", targetId: "", overwrite: false, bundle: null, plan: null, sel: {}, result: null,
-    trash: { app: null, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0, open: new Map() } },
+    trash: { app: null, profiles: null, sizes: [], naming: [], sizesId: "", namingId: "", profileId: "", detail: null, selected: new Set(), error: null, fetchedAt: 0, open: new Map() } },
 };
 
 const TABS = [["instances", "server"], ["export", "upload"], ["import", "download"], ["backups", "archive"]];
@@ -614,7 +618,7 @@ function importSetup() {
     if (m.mode === "file") return m.text.trim() ? null : t("imp_need_file");
     if (m.mode === "instance") return m.srcId ? null : t("imp_need_inst");
     if (target.app !== "radarr" && target.app !== "sonarr") return t("trash_only");
-    return m.trash.profileId ? null : t("need_profile");
+    return m.trash.profileId || m.trash.sizesId || m.trash.namingId ? null : t("need_profile");
   };
   function refresh() {
     const reason = why();
@@ -628,8 +632,12 @@ function importSetup() {
         bundle = await api(`/api/instances/${m.srcId}/export`);
         label = S.instances.find((i) => i.id === m.srcId).name;
       } else if (m.mode === "trash") {
-        bundle = await api(`/api/trash/${m.trash.app}/build`, { method: "POST", body: { profile_id: m.trash.profileId, formats: [...m.trash.selected] } });
-        label = `TRaSH Guides · ${m.trash.detail?.profile.name ?? ""}`;
+        const T = m.trash;
+        bundle = await api(`/api/trash/${T.app}/build`, { method: "POST", body: {
+          profile_id: T.profileId || null, formats: T.profileId ? [...T.selected] : null, sizes: T.sizesId || null, naming: T.namingId || null } });
+        const named = (list, id) => list.find((x) => x.id === id)?.name;
+        label = ["TRaSH Guides", T.detail?.profile.name, T.sizesId && `${t("trash_sizes")}: ${named(T.sizes, T.sizesId)}`,
+          T.namingId && `${t("trash_naming")}: ${named(T.naming, T.namingId)}`].filter(Boolean).join(" · ");
       } else {
         bundle = await api("/api/import/parse", { method: "POST", body: { text: m.text, app: target.app } });
         label = m.fileName || t("src_pasted");
@@ -740,15 +748,17 @@ function trashPanel(m, app, onChange = () => {}) {
     box.append(h("p", { class: "hint", style: "margin:0" }, t("trash_only")));
     return box;
   }
-  if (T.app !== app) Object.assign(T, { app, profiles: null, profileId: "", detail: null, selected: new Set(), error: null, open: new Map() });
+  if (T.app !== app) Object.assign(T, { app, profiles: null, sizes: [], naming: [], sizesId: "", namingId: "", profileId: "", detail: null, selected: new Set(), error: null, open: new Map() });
 
   const load = async (force = false) => {
     T.error = null; T.profiles = null; draw();
     try {
       if (force) await api("/api/trash/refresh", { method: "POST" });
       const r = await api(`/api/trash/${app}/profiles`);
-      T.profiles = r.profiles; T.fetchedAt = r.fetchedAt;
+      Object.assign(T, { profiles: r.profiles, sizes: r.sizes, naming: r.naming, fetchedAt: r.fetchedAt });
       if (T.profileId && !T.profiles.some((p) => p.id === T.profileId)) Object.assign(T, { profileId: "", detail: null });
+      if (!T.sizes.some((x) => x.id === T.sizesId)) T.sizesId = "";
+      if (!T.naming.some((x) => x.id === T.namingId)) T.namingId = "";
     } catch (e) { T.error = e.message; }
     draw();
   };
@@ -803,14 +813,24 @@ function trashPanel(m, app, onChange = () => {}) {
       return;
     }
     if (!T.profiles) { fill(box, h("p", { class: "hint", style: "margin:0" }, t("trash_loading"))); return; }
-    const sel = h("select", { onchange: (e) => pick(e.target.value) }, h("option", { value: "" }, t("trash_pick")));
+    const sel = h("select", { onchange: (e) => pick(e.target.value) }, h("option", { value: "" }, t("trash_none")));
     for (const cat of [...new Set(T.profiles.map((p) => p.category))]) {
       sel.append(h("optgroup", { label: cat }, T.profiles.filter((p) => p.category === cat).map((p) => h("option", { value: p.id }, p.name))));
     }
     sel.value = T.profileId;
     const d = T.detail;
+    const choice = (key, label, hint, list, text) => {
+      const el = h("select", { onchange: (e) => { T[key] = e.target.value; draw(); } }, h("option", { value: "" }, t("trash_none")),
+        list.map((x) => h("option", { value: x.id }, text(x))));
+      el.value = T[key];
+      return h("label", { class: "field" }, h("span", null, label), el, h("span", { class: "hint", style: "margin:4px 0 0" }, hint));
+    };
+    const scheme = T.naming.find((x) => x.id === T.namingId);
     fill(box, 
       h("label", { class: "field" }, h("span", null, t("trash_profile")), sel),
+      T.sizes.length ? choice("sizesId", t("trash_sizes"), t("trash_sizes_hint"), T.sizes, (x) => `${x.name} · ${t("trash_q", x.qualities)}`) : null,
+      T.naming.length ? choice("namingId", t("trash_naming"), t("trash_naming_hint"), T.naming, (x) => x.name) : null,
+      scheme ? h("pre", { class: "formats" }, Object.values(scheme.formats).join("\n")) : null,
       h("div", { class: "row", style: "margin-bottom:12px" },
         h("span", { class: "hint grow", style: "margin:0" }, t("trash_updated", new Date(T.fetchedAt * 1000).toLocaleString(lang))),
         h("button", { onclick: () => load(true) }, t("trash_refresh"))),

@@ -12,7 +12,8 @@ First release.
   profiles, indexers and indexer proxies. Everything is referenced by name, so a bundle moves between
   instances whose IDs differ.
 - Import of TRaSH Guides quality profiles (Radarr and Sonarr), from the catalogue or from pasted JSON, with
-  their mandatory formats, optional groups and scores.
+  their mandatory formats, optional groups and scores, and of their quality sizes and naming schemes, alone or
+  together with a profile.
 - A preview of every change before anything is written, an automatic backup of the target, and nothing is
   ever deleted. Exports never contain an API key or a password.
 - Step-by-step web interface in English and French (light and dark theme), with the version and build in the
