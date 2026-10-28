@@ -80,44 +80,19 @@ Réglages utiles :
 - **Authentification** : ajoutez `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (ou les mêmes clés sous `environment:` dans `docker-compose.yml`). Recommandé sauf si le port est réservé à un réseau de confiance.
 - **Port** : changez le premier nombre de `-p 8765:8765` (ou de `ports:` dans le compose).
 - **Joindre vos instances** : utilisez une adresse que le conteneur peut atteindre, soit l'IP de l'hôte et le port de l'application (`http://192.168.1.10:7878`), soit, sur un réseau Docker commun, le nom du conteneur (`http://radarr:7878`). `localhost` désigne le conteneur Portarr lui-même.
-
-### TrueNAS SCALE (24.10 ou plus récent)
-
-1. **Créez le stockage.** *Datasets* → votre pool → *Add Dataset*, nommé `portarr`. Puis *Permissions* → *Edit* : utilisateur `apps`, groupe `apps`, cochez *Apply User* et *Apply Group*, enregistrez. Si l'éditeur d'ACL s'ouvre à la place, donnez à `apps` le contrôle total.
-2. **Installez l'application.** *Apps → Discover Apps → ⋮ → Install via YAML*, puis collez [`deploy/truenas-app.yaml`](deploy/truenas-app.yaml) en adaptant le port et le chemin du dataset :
-
-   ```yaml
-   services:
-     portarr:
-       image: ghcr.io/ali0cha/portarr:latest
-       restart: unless-stopped
-       pull_policy: always     # retélécharge l'image à chaque enregistrement
-       user: "568:568"
-       ports:
-         - "30290:8765"          # un port libre, 9000 ou plus
-       environment:
-         TZ: Europe/Brussels
-         AUTH_USER: admin        # optionnel mais recommandé
-         AUTH_PASSWORD: change-me
-       volumes:
-         - /mnt/YOUR_POOL/portarr:/config
-   ```
-
-3. **Ouvrez** `http://<ip-truenas>:30290`, puis ajoutez vos instances.
-
-Si l'ajout d'une instance échoue avec une erreur HTTP 500 et `Permission denied: '/config/…'` dans le journal de l'application, le dossier n'est pas inscriptible par l'uid 568 : corrigez son propriétaire ou son ACL.
+- **Droits** : si l'ajout d'une instance échoue avec une erreur HTTP 500 et `Permission denied: '/config/…'` dans le journal, le dossier n'est pas inscriptible par l'uid 568. Corrigez son propriétaire ou son ACL.
 
 ### Ajouter vos instances
 
 *Instances* → *Ajouter une instance*. Indiquez l'adresse que le conteneur peut atteindre et la clé API de *Paramètres → Général → Sécurité*. Si vous utilisez une URL Base, ajoutez-la (`http://192.168.1.10:7878/radarr`).
 
-| Application | Port par défaut | Sur TrueNAS |
-|---|---|---|
-| Radarr | 7878 | 30025 |
-| Sonarr | 8989 | 30027 |
-| Lidarr | 8686 | |
-| Whisparr | 6969 | |
-| Prowlarr | 9696 | |
+| Application | Port par défaut |
+|---|---|
+| Radarr | 7878 |
+| Sonarr | 8989 |
+| Lidarr | 8686 |
+| Whisparr | 6969 |
+| Prowlarr | 9696 |
 
 ## Utilisation
 
@@ -172,13 +147,10 @@ Les *Applications* (les liens Prowlarr → Radarr/Sonarr, qui contiennent des cl
 |---|---|
 | Docker Compose | `git pull && docker compose up -d --build` |
 | docker run | `docker pull ghcr.io/ali0cha/portarr:latest`, puis supprimez et recréez le conteneur (le volume est conservé) |
-| TrueNAS | *Apps → portarr → Edit → Save*. Avec `pull_policy: always` dans le YAML, TrueNAS retélécharge l'image |
-
-Si TrueNAS garde l'ancienne image, lancez `sudo docker pull ghcr.io/ali0cha/portarr:latest` depuis le shell du NAS, puis refaites *Edit → Save*.
 
 L'image publiée ne change que lorsque la dernière construction de l'onglet **Actions** de ce dépôt est verte. Pour savoir ce qui tourne, lisez le bas de la barre latérale : la **version** et le **commit** dont l'image a été construite (par exemple `build a1b2c3d`). Une image construite à la main affiche `build dev`.
 
-**Avis de mise à jour.** Quand une version plus récente existe, un lien apparaît sous la version, en bas de la barre latérale. Portarr compare son `__version__` à celui de la branche `main` de ce dépôt : une toute petite requête vers `raw.githubusercontent.com`, au plus toutes les 6 heures, qui n'envoie rien sur vous ni sur vos instances. Hors ligne, rien ne s'affiche. Le lien peut apparaître quelques minutes avant la publication de la nouvelle image : vérifiez d'abord que la construction est verte. `PORTARR_UPDATE_CHECK=0` la désactive.
+**Avis de mise à jour.** En bas de la barre latérale, une coche verte à côté de la version confirme que vous êtes à jour (survolez-la pour le détail). Quand une version plus récente existe, un lien apparaît à la place, sous la version. Portarr compare son `__version__` à celui de la branche `main` de ce dépôt : une toute petite requête vers `raw.githubusercontent.com`, au plus toutes les 6 heures, qui n'envoie rien sur vous ni sur vos instances. Hors ligne, ou avec la vérification désactivée, ni la coche ni le lien ne s'affichent, faute de pouvoir comparer. Le lien peut apparaître quelques minutes avant la publication de la nouvelle image : vérifiez d'abord que la construction est verte. `PORTARR_UPDATE_CHECK=0` la désactive.
 
 Vos instances et vos sauvegardes sont dans `/config` et survivent aux mises à jour.
 

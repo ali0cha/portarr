@@ -80,44 +80,19 @@ Useful settings:
 - **Authentication**: add `-e AUTH_USER=admin -e AUTH_PASSWORD=...` (or the same keys under `environment:` in `docker-compose.yml`). Recommended unless the port is limited to a trusted network.
 - **Port**: change the first number of `-p 8765:8765` (or of `ports:` in the compose file).
 - **Reaching your instances**: use an address the container can reach, either the host's IP and the application's port (`http://192.168.1.10:7878`) or, on a shared Docker network, the container name (`http://radarr:7878`). `localhost` is the Portarr container itself.
-
-### TrueNAS SCALE (24.10 or newer)
-
-1. **Create the storage.** *Datasets* → your pool → *Add Dataset*, named `portarr`. Then *Permissions* → *Edit*: user `apps`, group `apps`, tick *Apply User* and *Apply Group*, save. If the ACL editor opens instead, give `apps` full control.
-2. **Install the app.** *Apps → Discover Apps → ⋮ → Install via YAML*, then paste [`deploy/truenas-app.yaml`](deploy/truenas-app.yaml) and adjust the port and the dataset path:
-
-   ```yaml
-   services:
-     portarr:
-       image: ghcr.io/ali0cha/portarr:latest
-       restart: unless-stopped
-       pull_policy: always     # re-downloads the image each time the app is saved
-       user: "568:568"
-       ports:
-         - "30290:8765"          # a free port, 9000 or above
-       environment:
-         TZ: Europe/Brussels
-         AUTH_USER: admin        # optional but recommended
-         AUTH_PASSWORD: change-me
-       volumes:
-         - /mnt/YOUR_POOL/portarr:/config
-   ```
-
-3. **Open** `http://<truenas-ip>:30290`, then add your instances.
-
-If adding an instance fails with an HTTP 500 and `Permission denied: '/config/…'` in the app's log, the folder is not writable by uid 568: fix its owner or ACL.
+- **Permissions**: if adding an instance fails with an HTTP 500 and `Permission denied: '/config/…'` in the log, the folder is not writable by uid 568. Fix its owner or ACL.
 
 ### Adding your instances
 
 *Instances* → *Add instance*. Give the address the container can reach and the API key from *Settings → General → Security*. If you use a URL Base, include it (`http://192.168.1.10:7878/radarr`).
 
-| Application | Default port | On TrueNAS |
-|---|---|---|
-| Radarr | 7878 | 30025 |
-| Sonarr | 8989 | 30027 |
-| Lidarr | 8686 | |
-| Whisparr | 6969 | |
-| Prowlarr | 9696 | |
+| Application | Default port |
+|---|---|
+| Radarr | 7878 |
+| Sonarr | 8989 |
+| Lidarr | 8686 |
+| Whisparr | 6969 |
+| Prowlarr | 9696 |
 
 ## Using Portarr
 
@@ -172,13 +147,10 @@ Prowlarr masks API keys, passwords and usernames in its API, so they **cannot be
 |---|---|
 | Docker Compose | `git pull && docker compose up -d --build` |
 | docker run | `docker pull ghcr.io/ali0cha/portarr:latest`, then remove and recreate the container (the volume is kept) |
-| TrueNAS | *Apps → portarr → Edit → Save*. With `pull_policy: always` in the YAML, TrueNAS re-downloads the image |
-
-If TrueNAS keeps the old image, run `sudo docker pull ghcr.io/ali0cha/portarr:latest` from the NAS shell, then *Edit → Save* again.
 
 The published image only changes when the latest build in this repository's **Actions** tab is green. To check what is running, read the bottom of the sidebar: the **version** and the **commit** the image was built from (for example `build a1b2c3d`). An image built by hand shows `build dev`.
 
-**Update notice.** When a newer version exists, a link appears under the version at the bottom of the sidebar. Portarr compares its `__version__` with the one on this repository's `main` branch: a tiny request to `raw.githubusercontent.com`, made at most every 6 hours, that sends nothing about you or your instances. Offline, it stays silent. The link can appear a few minutes before the new image is published, so check that the build is green first. Set `PORTARR_UPDATE_CHECK=0` to turn it off.
+**Update notice.** At the bottom of the sidebar, a green check mark next to the version confirms you are up to date (hover it for the details). When a newer version exists, a link appears under the version instead. Portarr compares its `__version__` with the one on this repository's `main` branch: a tiny request to `raw.githubusercontent.com`, made at most every 6 hours, that sends nothing about you or your instances. Offline, or with the check turned off, neither is shown, since Portarr cannot tell. The link can appear a few minutes before the new image is published, so check that the build is green first. Set `PORTARR_UPDATE_CHECK=0` to turn it off.
 
 Your instances and backups live in `/config` and survive updates.
 

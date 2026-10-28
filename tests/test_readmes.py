@@ -42,7 +42,7 @@ def test_same_tables():
 
 def test_commands_and_config_are_identical():
     en, fr = code_blocks(EN), code_blocks(FR)
-    assert len(en) == len(fr) >= 5
+    assert len(en) == len(fr) >= 4
     for (lang_en, a), (lang_fr, b) in zip(en, fr):
         assert (lang_en, a) == (lang_fr, b)
 
@@ -51,7 +51,7 @@ def test_local_links_point_to_files_that_exist():
     for text in (EN, FR):
         targets = re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'src="([^"]+)"', text)
         local = [t for t in targets if not t.startswith(("http", "#", "mailto"))]
-        assert local, "expected at least the logo and the TrueNAS YAML"
+        assert local, "expected at least the logo and the screenshots"
         assert [t for t in local if not (ROOT / t).exists()] == []
 
 
