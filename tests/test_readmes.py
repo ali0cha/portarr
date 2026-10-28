@@ -58,3 +58,23 @@ def test_local_links_point_to_files_that_exist():
 def test_no_placeholder_left_behind():
     for text in (EN, FR):
         assert "YOUR_GITHUB_USER" not in text and "VOTRE_UTILISATEUR" not in text
+
+
+SHOTS = ROOT / "docs" / "screenshots"
+
+
+def shots_used(text: str, lang: str) -> list[str]:
+    return sorted(re.findall(rf"docs/screenshots/{lang}/([\w.-]+\.png)", text))
+
+
+def test_both_readmes_show_the_same_screenshots_in_their_own_language():
+    assert shots_used(EN, "en") == shots_used(FR, "fr") != []
+    assert not re.search(r"screenshots/fr/", EN) and not re.search(r"screenshots/en/", FR)  # no English image in the French page
+
+
+def test_every_screenshot_is_used_and_stays_light():
+    for lang, text in (("en", EN), ("fr", FR)):
+        on_disk = sorted(p.name for p in (SHOTS / lang).glob("*.png"))
+        assert on_disk == shots_used(text, lang), f"{lang}: unused or missing screenshots"
+        too_big = [p.name for p in (SHOTS / lang).glob("*.png") if p.stat().st_size > 450_000]
+        assert too_big == [], f"{too_big}: compress them (tools/screenshots/run.sh does it) to keep the repository light"

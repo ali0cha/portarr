@@ -6,6 +6,8 @@
 
 Portarr est un petit outil web qui **exporte et importe la configuration qualité de Radarr, Sonarr, Lidarr, Whisparr et Prowlarr**. Il sert à appliquer les [TRaSH Guides](https://trash-guides.info/), copier une configuration d'une instance à une autre, ou la sauvegarder et la partager, sans tout refaire à la main.
 
+<p align="center"><img src="docs/screenshots/fr/04-review.png" alt="Portarr vérifie un import : ce qui sera créé, modifié ou ignoré, avant toute écriture" width="860"></p>
+
 ## Fonctionnalités
 
 | Application | Ce qu'on peut exporter et importer |
@@ -27,7 +29,27 @@ Compatible avec Radarr v4+/v5+, Sonarr v4+, Whisparr v2 et v3 « Eros » (API v3
 
 > Lidarr et Prowlarr ont été validés contre des simulations de leurs spécifications OpenAPI officielles, et Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification). Aucun n'a encore été essayé sur une vraie instance. Lisez toujours l'aperçu ; la sauvegarde automatique couvre le reste.
 
-Remarques : la gestion des médias est décochée par défaut, et les réglages propres à l'hôte (corbeille, permissions) ne sont jamais exportés. Les tailles par qualité d'un profil de Whisparr v2 sont conservées, sauf pour les qualités d'un groupe.
+Remarques : la gestion des médias est décochée par défaut, et les réglages propres à l'hôte (corbeille, permissions) ne sont jamais exportés. Les tailles par qualité d'un profil de Whisparr v2 sont conservées, sauf pour les qualités d'un groupe. Certains avertissements de l'aperçu viennent des serveurs et ne sont pas encore traduits : ils restent en anglais dans l'interface française.
+
+## Captures d'écran
+
+Les instances ci-dessous sont simulées : aucune donnée réelle n'est affichée.
+
+**Vos instances**, chacune à la couleur de son application :
+
+<img src="docs/screenshots/fr/01-instances.png" alt="La liste des instances, chacune avec un badge à la couleur de son application" width="860">
+
+**Export** : choisissez ce qu'il faut inclure. La configuration se charge toute seule, et le fichier ne contient jamais de clé API ni de mot de passe :
+
+<img src="docs/screenshots/fr/02-export.png" alt="Choix de ce qu'il faut exporter depuis une instance Radarr" width="860">
+
+**Import depuis les TRaSH Guides** : choisissez un profil et ajustez ses groupes de formats optionnels :
+
+<img src="docs/screenshots/fr/03-trash-profile.png" alt="Choix d'un profil TRaSH Guides avec ses formats imposés et ses groupes optionnels" width="860">
+
+**Terminé** : le résumé, et la sauvegarde automatique de la cible faite juste avant d'écrire :
+
+<img src="docs/screenshots/fr/05-done.png" alt="Le résumé de l'import avec le lien vers la sauvegarde de la cible" width="860">
 
 ## Installation
 
@@ -142,6 +164,8 @@ Prowlarr masque les clés API, mots de passe et noms d'utilisateur dans son API 
 
 Les *Applications* (les liens Prowlarr → Radarr/Sonarr, qui contiennent des clés API) et les clients de téléchargement ne sont volontairement pas gérés : ils dépendent de votre environnement.
 
+<img src="docs/screenshots/fr/06-prowlarr-secrets.png" alt="Vérification d'un import Prowlarr : le nouvel indexeur qui a besoin de secrets est créé désactivé" width="860">
+
 ## Mise à jour
 
 | Installation | Commande ou action |
@@ -200,10 +224,12 @@ python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004
                                                  # faux serveurs, clé « demo-key » : un « -a » rempli et un « -b » cible par application
 python -m tests.fake_trash 7100                  # mini dépôt TRaSH hors ligne (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 CONFIG_DIR=./config python -m app                # l'application sur http://localhost:8765
+./tools/screenshots/run.sh                       # régénère docs/screenshots (Docker et Internet requis)
 ```
 
 - `tests/fake_arr.py` simule les API en mémoire (noms uniques, cutoffs valides, IDs de formats, secrets masqués, `forceSave`). Les tests couvrent l'aller-retour entre deux instances aux IDs différents, l'idempotence d'un second import et l'absence de secrets dans les exports.
 - Les textes de l'interface sont dans la table `I18N` de `app/static/app.js`. `tests/test_i18n.py` garde l'anglais et le français alignés, et `tests/test_readmes.py` fait de même pour les deux README.
+- `docs/screenshots/` est généré par `tools/screenshots/run.sh` (la vraie application, les faux serveurs et Chromium sans interface). Régénérez-le après une modification de l'interface.
 - Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py`. La construction GitHub ajoute le commit.
 
 ## Pistes d'évolution
