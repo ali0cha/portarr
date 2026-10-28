@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import __version__
 from .arr import ArrClient, ArrError
 from .porter import Importer, PorterError, export_bundle, parse_bundle
 from .trash import DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, list_profiles, profile_detail, profile_from_catalog
@@ -24,6 +25,7 @@ from .store import InstanceStore, public
 
 mimetypes.add_type("font/woff2", ".woff2")  # not in every base image
 
+COMMIT = os.environ.get("PORTARR_COMMIT", "")[:7]  # baked into the Docker image by the build
 CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/config"))
 AUTH_USER = os.environ.get("AUTH_USER", "")
 AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "")
@@ -146,6 +148,11 @@ async def _detect(url: str, api_key: str, verify: bool) -> dict[str, Any]:
 @app.get("/healthz")
 async def healthz():
     return {"ok": True, "config_writable": config_writable()}
+
+
+@app.get("/api/version")
+async def version():
+    return {"version": __version__, "commit": COMMIT or None}
 
 
 @app.get("/api/instances")

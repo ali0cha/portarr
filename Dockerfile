@@ -12,6 +12,10 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 
+# The commit this image was built from, shown in the sidebar (set by CI; "dev" when built by hand)
+ARG COMMIT=dev
+ENV PORTARR_COMMIT=$COMMIT
+
 # 568:568 is the "apps" user/group of TrueNAS SCALE
 RUN mkdir /config && chown 568:568 /config
 USER 568:568

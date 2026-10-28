@@ -11,6 +11,7 @@ from tests.fake_arr import Router, make_fake, make_fake_prowlarr
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "CONFIG_DIR", tmp_path)  # never the real /config: CI does not run as root
     monkeypatch.setattr(main, "store", InstanceStore(tmp_path / "instances.json"))
     monkeypatch.setattr(main, "backup_dir", tmp_path / "backups")
     monkeypatch.setattr(main, "AUTH_USER", "")
@@ -111,3 +112,17 @@ def test_unwritable_config_gives_a_clear_error(client, monkeypatch):
     assert r.status_code == 500
     assert "Permission denied" in r.json()["detail"] and "568" in r.json()["detail"]
     assert client.get("/healthz").json() == {"ok": True, "config_writable": True}
+
+
+def test_healthz_reports_an_unwritable_config_folder(client, monkeypatch):
+    monkeypatch.setattr(main.os, "access", lambda *a, **k: False)  # root would bypass real permissions
+    assert client.get("/healthz").json() == {"ok": True, "config_writable": False}
+
+
+def test_version_endpoint(client, monkeypatch):
+    from app import __version__
+
+    monkeypatch.setattr(main, "COMMIT", "")
+    assert client.get("/api/version").json() == {"version": __version__, "commit": None}
+    monkeypatch.setattr(main, "COMMIT", "7fb74a0")
+    assert client.get("/api/version").json() == {"version": __version__, "commit": "7fb74a0"}

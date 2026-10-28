@@ -123,6 +123,7 @@ services:
   portarr:
     image: ghcr.io/ali0cha/portarr:latest
     restart: unless-stopped
+    pull_policy: always     # retélécharge l'image à chaque enregistrement : les mises à jour tiennent en un clic
     user: "568:568"
     ports:
       - "30290:8765"          # port libre ≥ 9000
@@ -141,6 +142,19 @@ Ouvrez ensuite `http://<ip-truenas>:30290`.
 ### 4. Ajouter vos instances
 
 Onglet **Instances** → *Ajouter*. Utilisez l'adresse que le conteneur peut atteindre, typiquement `http://<ip-truenas>:<port de l'app>` (par défaut 30025 pour Radarr, 30027 pour Sonarr sur TrueNAS ; les ports par défaut hors TrueNAS sont 8686 pour Lidarr, 6969 pour Whisparr, 9696 pour Prowlarr), et la clé API de *Paramètres → Général → Sécurité*. Si vous utilisez une « URL Base », ajoutez-la (`http://…:7878/radarr`).
+
+### Mettre à jour Portarr sur TrueNAS
+
+1. Sur GitHub, onglet **Actions** du dépôt : la dernière construction doit être **verte**. C'est elle qui publie la nouvelle image ; si elle est rouge, l'image `latest` est restée l'ancienne.
+2. Dans TrueNAS : **Apps → portarr → Edit**, vérifiez que `pull_policy: always` figure dans le YAML (ajoutez-la sinon), puis **Save**. TrueNAS retélécharge l'image et recrée le conteneur.
+3. Vos instances et vos sauvegardes sont dans `/config` : elles sont conservées.
+4. Pour vérifier que la nouvelle image tourne, regardez le bas de la barre latérale : la **version** (`Portarr v0.1.0`) et le **commit** dont l'image a été construite (`build 7fb74a0`). Comparez ce commit au dernier de GitHub. Une image construite à la main affiche `build dev`.
+
+Si l'image ne semble pas changer, tirez-la à la main depuis le shell du NAS puis refaites **Edit → Save** :
+
+```bash
+sudo docker pull ghcr.io/ali0cha/portarr:latest
+```
 
 ## Utilisation
 
@@ -205,6 +219,8 @@ python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004
 CONFIG_DIR=./config python -m app                # l'application sur http://localhost:8765
 python -m tests.fake_trash 7100                  # mini dépôt TRaSH hors ligne (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
+
+Pour publier une nouvelle version, changez `__version__` dans `app/__init__.py` ; le commit est ajouté automatiquement par la construction GitHub.
 
 Le backend est du FastAPI (`app/`), le frontend du JavaScript sans étape de build (`app/static/`). `tests/fake_arr.py` simule en mémoire l'API de Radarr, Sonarr, Whisparr et Lidarr (noms uniques, cutoff valide, IDs de formats, profils de métadonnées) et de Prowlarr (secrets masqués, validation à l'enregistrement, `forceSave`). Les tests couvrent notamment l'aller-retour entre deux instances aux IDs différents, l'idempotence d'un second import et l'absence de secrets dans les exports.
 

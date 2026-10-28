@@ -54,7 +54,7 @@ const I18N = {
     rev_nothing: "Nothing to apply: {0} already matches.", rev_pick: "Select at least one change to apply.",
     done_text: "{0} change(s) applied to {1}.", done_undo: "To undo: Import → A file, choose the backup below, and tick “overwrite”.",
     inst_empty_title: "No instance yet", inst_empty_cta: "Add your first Radarr, Sonarr, Lidarr, Whisparr or Prowlarr instance to get started.",
-    inst_add_tile: "Add an instance",
+    inst_add_tile: "Add an instance", build_title: "Built from commit {0}",
     imp_no_same_app: "There is no other {0} instance to copy from. Add one in Instances, or use a file.",
     src_trash: "TRaSH Guides", trash_only: "The TRaSH Guides only cover Radarr and Sonarr: choose a Radarr or Sonarr target instance.",
     trash_loading: "Downloading the TRaSH Guides… (about 25 MB, first time only)", trash_profile: "Quality profile", trash_pick: "Choose a profile…",
@@ -114,7 +114,7 @@ const I18N = {
     rev_nothing: "Rien à appliquer : {0} correspond déjà.", rev_pick: "Sélectionnez au moins un changement à appliquer.",
     done_text: "{0} changement(s) appliqué(s) à {1}.", done_undo: "Pour annuler : Import → Un fichier, choisissez la sauvegarde ci-dessous et cochez « écraser ».",
     inst_empty_title: "Aucune instance", inst_empty_cta: "Ajoutez votre première instance Radarr, Sonarr, Lidarr, Whisparr ou Prowlarr pour commencer.",
-    inst_add_tile: "Ajouter une instance",
+    inst_add_tile: "Ajouter une instance", build_title: "Construit depuis le commit {0}",
     imp_no_same_app: "Il n'y a pas d'autre instance {0} à copier. Ajoutez-en une dans Instances, ou utilisez un fichier.",
     src_trash: "TRaSH Guides", trash_only: "Les TRaSH Guides ne couvrent que Radarr et Sonarr : choisissez une instance cible Radarr ou Sonarr.",
     trash_loading: "Téléchargement des TRaSH Guides… (environ 25 Mo, la première fois seulement)", trash_profile: "Profil de qualité", trash_pick: "Choisir un profil…",
@@ -851,5 +851,15 @@ async function viewBackups() {
       : h("p", { class: "hint" }, t("bk_empty")));
 }
 
+// Version and build, bottom of the sidebar: tells whether the NAS really runs the latest image.
+async function renderVersion() {
+  try {
+    const v = await api("/api/version");
+    fill(document.getElementById("version"), h("strong", null, `Portarr v${v.version}`),
+      v.commit ? h("span", { class: "build", title: t("build_title", v.commit) }, `build ${v.commit}`) : null);
+  } catch { /* the version is a convenience, never a blocker */ }
+}
+
 renderHeader();
+renderVersion();
 render();

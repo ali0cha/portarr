@@ -123,6 +123,7 @@ services:
   portarr:
     image: ghcr.io/ali0cha/portarr:latest
     restart: unless-stopped
+    pull_policy: always     # re-downloads the image each time the app is saved: updates are one click
     user: "568:568"
     ports:
       - "30290:8765"          # a free port ≥ 9000
@@ -141,6 +142,19 @@ Then open `http://<truenas-ip>:30290`.
 ### 4. Add your instances
 
 **Instances** tab → *Add*. Use the address the container can reach, typically `http://<truenas-ip>:<app port>` (30025 for Radarr and 30027 for Sonarr by default on TrueNAS; outside TrueNAS the default ports are 8686 for Lidarr, 6969 for Whisparr, 9696 for Prowlarr), and the API key from *Settings → General → Security*. If you use a "URL Base", include it (`http://…:7878/radarr`).
+
+### Updating Portarr on TrueNAS
+
+1. On GitHub, the repository's **Actions** tab: the latest build must be **green**. It is what publishes the new image; if it is red, `latest` is still the old image.
+2. In TrueNAS: **Apps → portarr → Edit**, check that `pull_policy: always` is in the YAML (add it otherwise), then **Save**. TrueNAS re-downloads the image and recreates the container.
+3. Your instances and backups live in `/config`: they are kept.
+4. To check the new image is running, look at the bottom of the sidebar: the **version** (`Portarr v0.1.0`) and the **commit** the image was built from (`build 7fb74a0`). Compare that commit with the latest one on GitHub. An image built by hand shows `build dev`.
+
+If the image does not seem to change, pull it by hand from the NAS shell, then do **Edit → Save** again:
+
+```bash
+sudo docker pull ghcr.io/ali0cha/portarr:latest
+```
 
 ## Usage
 
@@ -205,6 +219,8 @@ python -m tests.fake_arr radarr-a:7001 radarr-b:7002 sonarr-a:7003 sonarr-b:7004
 CONFIG_DIR=./config python -m app                # the app on http://localhost:8765
 python -m tests.fake_trash 7100                  # offline mini TRaSH repo (TRASH_GUIDES_URL=http://127.0.0.1:7100/Guides.tar.gz)
 ```
+
+To release a new version, change `__version__` in `app/__init__.py`; the commit is added automatically by the GitHub build.
 
 The backend is FastAPI (`app/`), the frontend is build-free JavaScript (`app/static/`). `tests/fake_arr.py` simulates the Radarr, Sonarr, Whisparr and Lidarr APIs in memory (unique names, valid cutoff, format IDs, metadata profiles) and Prowlarr's (masked secrets, validation on save, `forceSave`). The tests cover in particular the round trip between two instances with different IDs, the idempotence of a second import, and the absence of secrets in exports.
 
