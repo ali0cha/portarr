@@ -43,6 +43,15 @@ const I18N = {
     fb_key_changed: "The restored backup has another API key: edit the instance {0} in Portarr and enter the application's current key.",
     fb_sel_title: "Selective restore", fb_sel_hint: "Choose what to bring back from the JSON export, with the usual preview. Nothing is replaced wholesale.", fb_sel_btn: "Choose what to restore…",
     fb_dl_zip: "Download the zip", fb_dl_json: "Download the JSON",
+    bk_scheduled: "scheduled", bk_imported: "imported", bk_uploaded: "uploaded",
+    sc_title: "Scheduled backups", sc_hint: "Portarr backs up the instances you choose by itself and keeps the last few of each. Only the backups it makes this way are ever removed automatically.",
+    sc_enable: "Back up automatically", sc_every: "Every", sc_days: "day(s), at", sc_keep: "Keep the last", sc_keep2: "backups of each instance",
+    sc_instances: "Instances to back up", sc_remote: "Remove the copy left on the application once Portarr has downloaded it",
+    sc_save: "Save the schedule", sc_saved: "Schedule saved.", sc_next: "Next backup: {0}", sc_tz: "Times are the server's ({0}). Set the TZ variable of the container to change them.",
+    sc_last: "Last run", im_title: "Bring in an existing backup",
+    im_hint: "Keep in Portarr a backup the application made by itself, or a zip from another machine, so it can be restored from here. There is no JSON export with it, so only a full restore is offered.",
+    im_show: "Show its backups", im_keep: "Keep a copy", im_none: "This application holds no backup.", im_kept: "Backup kept: {0}.",
+    im_upload: "Upload a zip…", im_uploading: "Uploading…", im_uploaded: "Backup added: {0}.", im_or: "or",
     changes: "{0} change(s)", loading: "Loading…",
     exp_step1: "Instance", exp_step2: "Content", exp_step3: "File",
     exp_pick_title: "Instance to export from", exp_content_title: "What to include",
@@ -115,6 +124,15 @@ const I18N = {
     fb_key_changed: "La sauvegarde restaurée a une autre clé API : modifiez l'instance {0} dans Portarr et saisissez la clé actuelle de l'application.",
     fb_sel_title: "Restauration sélective", fb_sel_hint: "Choisissez ce qu'il faut récupérer de l'export JSON, avec l'aperçu habituel. Rien n'est remplacé en bloc.", fb_sel_btn: "Choisir quoi restaurer…",
     fb_dl_zip: "Télécharger le zip", fb_dl_json: "Télécharger le JSON",
+    bk_scheduled: "planifiée", bk_imported: "importée", bk_uploaded: "téléversée",
+    sc_title: "Sauvegardes planifiées", sc_hint: "Portarr sauvegarde seul les instances que vous choisissez et garde les dernières de chacune. Seules les sauvegardes faites ainsi sont supprimées automatiquement.",
+    sc_enable: "Sauvegarder automatiquement", sc_every: "Tous les", sc_days: "jour(s), à", sc_keep: "Garder les", sc_keep2: "dernières sauvegardes de chaque instance",
+    sc_instances: "Instances à sauvegarder", sc_remote: "Supprimer la copie restée sur l'application une fois que Portarr l'a téléchargée",
+    sc_save: "Enregistrer la planification", sc_saved: "Planification enregistrée.", sc_next: "Prochaine sauvegarde : {0}", sc_tz: "Les heures sont celles du serveur ({0}). Réglez la variable TZ du conteneur pour les changer.",
+    sc_last: "Dernier passage", im_title: "Importer une sauvegarde existante",
+    im_hint: "Gardez dans Portarr une sauvegarde faite par l'application elle-même, ou un zip venu d'une autre machine, pour pouvoir la restaurer d'ici. Elle n'a pas d'export JSON : seule la restauration complète est proposée.",
+    im_show: "Voir ses sauvegardes", im_keep: "En garder une copie", im_none: "Cette application ne contient aucune sauvegarde.", im_kept: "Sauvegarde conservée : {0}.",
+    im_upload: "Téléverser un zip…", im_uploading: "Téléversement…", im_uploaded: "Sauvegarde ajoutée : {0}.", im_or: "ou",
     changes: "{0} changement(s)", loading: "Chargement…",
     exp_step1: "Instance", exp_step2: "Contenu", exp_step3: "Fichier",
     exp_pick_title: "Instance à exporter", exp_content_title: "Ce qu'il faut inclure",
@@ -903,7 +921,8 @@ function importResult() {
 async function viewBackups() {
   const bk = (S.bk ??= { open: "", make: "", target: "", ack: false, notice: null });
   tools.set([toolBtn("refresh", t("refresh"), () => render())]);
-  const [full, files] = await Promise.all([api("/api/full-backups"), api("/api/backups")]);
+  const [full, files, sched] = await Promise.all([api("/api/full-backups"), api("/api/backups"), api("/api/backup-schedule")]);
+  bk.sched = structuredClone(sched.config); // what the form edits; the server's copy changes on "Save"
 
   const notice = bk.notice ? h("div", { class: `card note ${bk.notice.kind === "warn" ? "warnbox" : ""}` },
     h("div", { class: "row" }, h("div", { class: "grow" }, bk.notice.lines.map(([key, ...args]) => h("div", null, t(key, ...args)))),
@@ -927,7 +946,7 @@ async function viewBackups() {
   const rows = full.map((m) => h("tr", null,
     h("td", null, new Date(m.createdAt).toLocaleString(lang)),
     h("td", null, h("div", { class: "row", style: "gap:6px" }, h("strong", { class: "name" }, m.instance), h("span", { class: `badge b-${m.app}` }, cap(m.app)),
-      m.reason === "before-restore" ? h("span", { class: "badge" }, t("fb_before_restore")) : null)),
+      REASON[m.reason] ? h("span", { class: "badge" }, t(REASON[m.reason])) : null)),
     h("td", null, m.version ?? ""),
     h("td", null, fmtSize(m.size)),
     h("td", null, h("div", { class: "row", style: "gap:6px;justify-content:flex-end" },
@@ -939,12 +958,14 @@ async function viewBackups() {
   const open = full.find((m) => m.id === bk.open);
 
   return h("div", null, h("h2", null, t("tab_backups")), h("p", { class: "hint" }, t("bk_page_hint")), notice, makeCard,
+    S.instances.length ? scheduleCard(bk, sched) : null,
     h("h3", { style: "margin:18px 0 8px" }, t("fb_list")),
     full.length
       ? h("div", { class: "card", style: "overflow-x:auto" }, h("table", null,
         h("tr", null, h("th", null, t("date")), h("th", null, t("instance")), h("th", null, "Version"), h("th", null, t("size")), h("th", null)), rows))
       : h("p", { class: "hint" }, t("fb_none")),
     open ? restorePanel(open, bk) : null,
+    S.instances.length ? importCard(bk) : null,
     h("h3", { style: "margin:22px 0 4px" }, t("bk_snap_title")), h("p", { class: "hint" }, t("bk_hint")),
     files.length
       ? h("div", { class: "card" }, h("table", null,
@@ -954,6 +975,82 @@ async function viewBackups() {
           h("td", null, new Date(f.mtime * 1000).toLocaleString(lang)),
           h("td", null, `${Math.max(1, Math.round(f.size / 1024))} KB`)))))
       : h("p", { class: "hint" }, t("bk_empty")));
+}
+
+const REASON = { "before-restore": "fb_before_restore", scheduled: "bk_scheduled", imported: "bk_imported", uploaded: "bk_uploaded" };
+
+// Backups made by themselves: when, how many to keep, which instances.
+function scheduleCard(bk, sched) {
+  const c = bk.sched;
+  const number = (key, min, max) => h("input", { type: "number", min, max, value: c[key], style: "width:5.5em", onchange: (e) => { c[key] = e.target.valueAsNumber; } });
+  const when = h("input", { type: "time", value: c.time, style: "width:8em", onchange: (e) => { c.time = e.target.value; } });
+  const next = sched.nextRun ? t("sc_next", new Date(sched.nextRun).toLocaleString(lang)) : null;
+  const results = S.instances.filter((i) => sched.results[i.id]).map((i) => {
+    const r = sched.results[i.id];
+    return h("div", { class: "row", style: "gap:8px;font-size:13px" }, h("span", { class: `badge ${r.ok ? "b-ok" : "b-error"}` }, t(r.ok ? "s_ok" : "s_error")),
+      h("span", null, `${i.name} · ${new Date(r.at).toLocaleString(lang)}`), r.error ? h("span", { class: "hint", style: "margin:0" }, r.error) : null);
+  });
+  return h("div", { class: "card" }, h("h3", null, t("sc_title")), h("p", { class: "hint", style: "margin:0 0 10px" }, t("sc_hint")),
+    h("label", { class: "row", style: "gap:8px;margin-bottom:10px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: c.enabled, onchange: (e) => { c.enabled = e.target.checked; } }), h("strong", null, t("sc_enable"))),
+    h("div", { class: "row", style: "gap:8px;margin-bottom:10px" }, t("sc_every"), number("everyDays", 1, 365), t("sc_days"), when),
+    h("div", { class: "row", style: "gap:8px;margin-bottom:12px" }, t("sc_keep"), number("keep", 1, 365), t("sc_keep2")),
+    h("div", { class: "hint", style: "margin:0 0 4px" }, t("sc_instances")),
+    S.instances.map((i) => h("label", { class: "row", style: "gap:8px;margin-bottom:4px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: c.instances.includes(i.id), onchange: (e) => {
+        c.instances = e.target.checked ? [...c.instances, i.id] : c.instances.filter((x) => x !== i.id);
+      } }), h("span", null, i.name), h("span", { class: `badge b-${i.app}` }, cap(i.app)))),
+    h("label", { class: "row", style: "gap:8px;margin:10px 0 12px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: c.deleteRemote, onchange: (e) => { c.deleteRemote = e.target.checked; } }), h("span", null, t("sc_remote"))),
+    h("div", { class: "row" }, h("button", { class: "primary", onclick: (e) => busy(e.currentTarget, "…", async () => {
+      await api("/api/backup-schedule", { method: "PUT", body: c });
+      toast(t("sc_saved"), "ok");
+      render();
+    }) }, t("sc_save")), next ? h("span", { class: "hint", style: "margin:0" }, next) : null),
+    h("p", { class: "hint", style: "margin:10px 0 0" }, t("sc_tz", sched.timezone || "UTC")),
+    results.length ? h("div", { style: "margin-top:10px" }, h("div", { class: "hint", style: "margin:0 0 4px" }, t("sc_last")), results) : null);
+}
+
+// Bringing in a backup the application already has, or a zip from elsewhere.
+function importCard(bk) {
+  const sel = instanceSelect(bk.remoteFor, (v) => { bk.remoteFor = v; bk.remote = null; render(); });
+  bk.remoteFor = sel.value;
+  const list = bk.remote && bk.remote.id === bk.remoteFor ? bk.remote.items : null;
+  const el = h("details", { class: "section card" }, h("summary", null, h("span", { class: "grow" }, t("im_title"))),
+    h("p", { class: "hint", style: "margin:8px 0 10px" }, t("im_hint")),
+    h("div", { class: "row" }, h("div", { class: "grow" }, sel),
+      h("button", { onclick: (e) => busy(e.currentTarget, "…", async () => {
+        bk.remote = { id: bk.remoteFor, items: await api(`/api/instances/${bk.remoteFor}/remote-backups`) };
+        bk.importOpen = true;
+        render();
+      }) }, t("im_show"))),
+    list ? (list.length
+      ? h("table", { style: "margin-top:8px" }, list.map((b) => h("tr", null,
+        h("td", null, h("span", { class: "name" }, b.name)), h("td", null, h("span", { class: "badge" }, b.type)),
+        h("td", null, new Date(b.time).toLocaleString(lang)), h("td", null, fmtSize(b.size)),
+        h("td", null, h("button", { onclick: (e) => busy(e.currentTarget, "…", async () => {
+          const m = await api(`/api/instances/${bk.remoteFor}/remote-backups/${b.id}/keep`, { method: "POST" });
+          toast(t("im_kept", m.id), "ok");
+          render();
+        }) }, t("im_keep"))))))
+      : h("p", { class: "hint", style: "margin:8px 0 0" }, t("im_none"))) : null,
+    h("div", { class: "row", style: "margin-top:12px;gap:10px" }, h("span", { class: "hint", style: "margin:0" }, t("im_or")),
+      h("button", { onclick: (e) => e.currentTarget.nextElementSibling.click() }, icon("upload"), " ", h("span", { class: "lbl" }, t("im_upload"))),
+      h("input", { type: "file", accept: ".zip,application/zip", hidden: true, onchange: (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const btn = e.target.previousElementSibling;
+        busy(btn, t("im_uploading"), async () => {
+          const res = await fetch(`/api/full-backups/upload?name=${encodeURIComponent(f.name)}`, { method: "PUT", body: f }); // streamed: a zip can be big
+          const data = await res.json().catch(() => null);
+          if (!res.ok) throw new Error(data?.detail || `HTTP ${res.status}`);
+          toast(t("im_uploaded", data.id), "ok");
+          render();
+        });
+      } })));
+  el.open = !!bk.importOpen;
+  el.addEventListener("toggle", () => { bk.importOpen = el.open; });
+  return el;
 }
 
 // What can be done with one full backup: restore it entirely (the zip), or pick things out of its JSON.
@@ -984,10 +1081,11 @@ function restorePanel(m, bk) {
     h("h3", null, t("fb_restore_of", m.id)),
     h("div", { class: "row", style: "gap:14px;margin-bottom:12px" },
       h("a", { href: `/api/full-backups/${encodeURIComponent(m.id)}/zip`, download: `${m.id}.zip` }, t("fb_dl_zip")),
-      h("a", { href: `/api/full-backups/${encodeURIComponent(m.id)}/config`, download: `${m.id}.json` }, t("fb_dl_json"))),
+      m.config !== false ? h("a", { href: `/api/full-backups/${encodeURIComponent(m.id)}/config`, download: `${m.id}.json` }, t("fb_dl_json")) : null),
     targets.length ? h("label", { class: "field" }, h("span", null, t("fb_target")), sel) : h("p", { class: "err", style: "margin:0 0 10px" }, t("fb_no_target", cap(m.app))),
-    h("h4", { style: "margin:4px 0 4px" }, t("fb_sel_title")), h("p", { class: "hint", style: "margin:0 0 8px" }, t("fb_sel_hint")),
-    h("div", { style: "margin-bottom:16px" }, h("button", { disabled: !target, onclick: (e) => busy(e.currentTarget, "…", selective) }, t("fb_sel_btn"))),
+    m.config !== false ? h("div", null,
+      h("h4", { style: "margin:4px 0 4px" }, t("fb_sel_title")), h("p", { class: "hint", style: "margin:0 0 8px" }, t("fb_sel_hint")),
+      h("div", { style: "margin-bottom:16px" }, h("button", { disabled: !target, onclick: (e) => busy(e.currentTarget, "…", selective) }, t("fb_sel_btn")))) : null,
     h("h4", { style: "margin:4px 0 4px" }, t("fb_full_title")), h("p", { class: "hint", style: "margin:0 0 8px" }, t("fb_full_hint")),
     h("label", { class: "row", style: "gap:8px;margin-bottom:10px;cursor:pointer" },
       h("input", { type: "checkbox", checked: bk.ack, onchange: (e) => { bk.ack = e.target.checked; run.disabled = !bk.ack || !target; } }),

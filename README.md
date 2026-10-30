@@ -21,7 +21,7 @@ Portarr is a small web tool that **exports and imports the quality configuration
 - **Preview first.** Every import lists what will be created, updated or skipped, field by field. You untick what you don't want.
 - **Automatic backup** of the target, saved right before anything is written. If the backup fails, nothing is changed.
 - **Never deletes** anything on the target.
-- **Full backups and restores** of a whole instance (the application's own backup, with a JSON export of its configuration), kept in Portarr.
+- **Full backups and restores** of a whole instance (the application's own backup, with a JSON export of its configuration), kept in Portarr, on demand or on a schedule.
 - **Safe to share.** Exports contain no API key or password, and your instances' keys never leave the server.
 - **Same application to same application** only: an export from Sonarr is refused on Radarr.
 - English and French interface (switch in the header), light and dark theme, and the application type is detected when you add an instance.
@@ -140,7 +140,18 @@ The three choices are independent, and each one can be left on *None*: you can i
 
 Exports and imports move a *configuration*. A **full backup** copies the whole instance, so you can bring it back after a failed upgrade, a broken database or a move to another machine.
 
-**Back up**: open **Backups**, pick an instance and click **Back up now**. Portarr asks the application to make its own backup (the zip you would get from *System → Backup*: database, settings, API key, indexer passwords, history), downloads it, and keeps it in `/config/backups/full/` together with a JSON export of the configuration, taken at the same moment. The copy left on the application is not removed.
+**Back up**: open **Backups**, pick an instance and click **Back up now**. Portarr asks the application to make its own backup (the zip you would get from *System → Backup*: database, settings, API key, indexer passwords, history), downloads it, and keeps it in `/config/backups/full/` together with a JSON export of the configuration, taken at the same moment. The copy left on the application is not removed, unless you ask for it in the schedule below.
+
+**Back up automatically**: in *Scheduled backups*, tick *Back up automatically*, then choose how often (every N days, at a time), how many backups of each instance to keep, and which instances. Switching it on does not back up at once: the first backup is at the next scheduled time.
+
+- Only the backups the schedule made are deleted to stay within the number you keep. Manual ones, the ones made before a restore and the imported ones stay until you delete them.
+- *Remove the copy left on the application* deletes, on the application, the copy Portarr has just downloaded. It is off by default.
+- Times are the server's. Set `TZ` on the container to change them (for example `-e TZ=Europe/Brussels`).
+- A backup that fails shows its reason under *Last run*, does not stop the other instances, and is tried again at the next time. The schedule only runs while Portarr runs.
+
+<img src="docs/screenshots/en/08-scheduled-backups.png" alt="Scheduled backups: every day at 03:00, keeping the last seven backups of two Radarr instances" width="860">
+
+**Bring in an existing backup**: under *Bring in an existing backup*, list the backups the application made by itself (its own scheduled ones included) and keep a copy in Portarr, or upload a zip from another machine. Such a zip has no JSON export, so only a full restore is offered for it.
 
 **Restore**: click **Restore…** on a backup, then choose:
 
@@ -152,7 +163,7 @@ Good to know:
 - A backup restores on an instance of **the same application**, which may be another instance than the one it came from, and not on an older version than the one that made it.
 - The restored backup brings its own API key. If it differs from the one Portarr has, Portarr says so: edit the instance and enter the current key.
 - A zip holds your API keys and indexer passwords. Treat `/config` and the downloaded files as secrets, and set `AUTH_USER` and `AUTH_PASSWORD`.
-- Backups pile up until you delete them (the *Delete* button). Their size is that of the application's backup, usually a few MB.
+- Backups made by hand pile up until you delete them (the *Delete* button). Their size is that of the application's backup, usually a few MB.
 
 <img src="docs/screenshots/en/07-full-backup.png" alt="The Backups page: a full backup of a Radarr instance and the choices to restore it" width="860">
 

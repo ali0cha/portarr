@@ -21,7 +21,7 @@ Portarr est un petit outil web qui **exporte et importe la configuration qualit�
 - **Aperçu d'abord.** Chaque import liste ce qui sera créé, modifié ou ignoré, champ par champ. Vous décochez ce que vous ne voulez pas.
 - **Sauvegarde automatique** de la cible, faite juste avant toute écriture. Si elle échoue, rien n'est modifié.
 - **Ne supprime jamais** rien sur la cible.
-- **Sauvegardes et restaurations complètes** d'une instance entière (la sauvegarde propre de l'application, avec un export JSON de sa configuration), conservées dans Portarr.
+- **Sauvegardes et restaurations complètes** d'une instance entière (la sauvegarde propre de l'application, avec un export JSON de sa configuration), conservées dans Portarr, à la demande ou planifiées.
 - **Sans risque à partager.** Les exports ne contiennent ni clé API ni mot de passe, et les clés de vos instances ne quittent jamais le serveur.
 - **Une application vers la même application** uniquement : un export Sonarr est refusé sur Radarr.
 - Interface en anglais et en français (sélecteur dans l'en-tête), thème clair et sombre, et le type d'application est détecté à l'ajout d'une instance.
@@ -140,7 +140,18 @@ Les trois choix sont indépendants, et chacun peut rester sur *Aucun* : vous pou
 
 Les exports et imports déplacent une *configuration*. Une **sauvegarde complète** copie l'instance entière, pour la retrouver après une mise à jour ratée, une base abîmée ou un déménagement vers une autre machine.
 
-**Sauvegarder** : ouvrez **Sauvegardes**, choisissez une instance et cliquez sur **Sauvegarder maintenant**. Portarr demande à l'application de faire sa propre sauvegarde (le zip que vous obtiendriez par *Système → Sauvegardes* : base de données, réglages, clé API, mots de passe des indexeurs, historique), la télécharge et la garde dans `/config/backups/full/`, avec un export JSON de la configuration pris au même moment. La copie restée sur l'application n'est pas supprimée.
+**Sauvegarder** : ouvrez **Sauvegardes**, choisissez une instance et cliquez sur **Sauvegarder maintenant**. Portarr demande à l'application de faire sa propre sauvegarde (le zip que vous obtiendriez par *Système → Sauvegardes* : base de données, réglages, clé API, mots de passe des indexeurs, historique), la télécharge et la garde dans `/config/backups/full/`, avec un export JSON de la configuration pris au même moment. La copie restée sur l'application n'est pas supprimée, sauf si vous le demandez dans la planification ci-dessous.
+
+**Sauvegarder automatiquement** : dans *Sauvegardes planifiées*, cochez *Sauvegarder automatiquement*, puis choisissez la fréquence (tous les N jours, à une heure), le nombre de sauvegardes à garder pour chaque instance et les instances concernées. L'activer ne déclenche pas de sauvegarde tout de suite : la première a lieu à la prochaine heure prévue.
+
+- Seules les sauvegardes faites par la planification sont supprimées pour rester dans le nombre gardé. Les sauvegardes manuelles, celles faites avant une restauration et celles importées restent jusqu'à ce que vous les supprimiez.
+- *Supprimer la copie restée sur l'application* efface, sur l'application, la copie que Portarr vient de télécharger. C'est désactivé par défaut.
+- Les heures sont celles du serveur. Réglez `TZ` sur le conteneur pour les changer (par exemple `-e TZ=Europe/Brussels`).
+- Une sauvegarde qui échoue affiche sa raison sous *Dernier passage*, n'empêche pas les autres instances et est retentée à l'heure suivante. La planification ne tourne que tant que Portarr tourne.
+
+<img src="docs/screenshots/fr/08-scheduled-backups.png" alt="Sauvegardes planifiées : tous les jours à 03:00, en gardant les sept dernières sauvegardes de deux instances Radarr" width="860">
+
+**Importer une sauvegarde existante** : sous *Importer une sauvegarde existante*, listez les sauvegardes que l'application a faites elle-même (ses sauvegardes planifiées comprises) et gardez-en une copie dans Portarr, ou téléversez un zip venu d'une autre machine. Un tel zip n'a pas d'export JSON : seule la restauration complète est proposée.
 
 **Restaurer** : cliquez sur **Restaurer…** à côté d'une sauvegarde, puis choisissez :
 
@@ -152,7 +163,7 @@ Bon à savoir :
 - Une sauvegarde se restaure sur une instance **de la même application**, qui peut être une autre instance que celle d'origine, et pas sur une version plus ancienne que celle qui l'a faite.
 - La sauvegarde restaurée ramène sa propre clé API. Si elle diffère de celle que Portarr a gardée, Portarr le dit : modifiez l'instance et saisissez la clé actuelle.
 - Un zip contient vos clés API et les mots de passe des indexeurs. Traitez `/config` et les fichiers téléchargés comme des secrets, et définissez `AUTH_USER` et `AUTH_PASSWORD`.
-- Les sauvegardes s'accumulent jusqu'à ce que vous les supprimiez (bouton *Supprimer*). Leur taille est celle de la sauvegarde de l'application, en général quelques Mo.
+- Les sauvegardes manuelles s'accumulent jusqu'à ce que vous les supprimiez (bouton *Supprimer*). Leur taille est celle de la sauvegarde de l'application, en général quelques Mo.
 
 <img src="docs/screenshots/fr/07-full-backup.png" alt="La page Sauvegardes : une sauvegarde complète d'une instance Radarr et les choix pour la restaurer" width="860">
 

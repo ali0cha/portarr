@@ -1,6 +1,7 @@
 """Portarr: export / import Sonarr & Radarr profiles, custom formats and quality settings."""
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -8,6 +9,7 @@ import mimetypes
 import os
 import re
 import secrets
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,7 @@ from .porter import FORMAT, VERSION, Importer, PorterError, export_bundle, parse
 from .trash import (DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, is_trash_sizes, list_naming,
                     list_profiles, list_sizes, profile_detail, profile_from_catalog, size_definitions)
 from .fullbackup import FullBackups
+from .schedule import BackupSchedule
 from .store import InstanceStore, public
 from .updates import UpdateChecker
 
@@ -51,7 +54,17 @@ catalog = TrashCatalog(CONFIG_DIR / "cache" / "trash-guides.json", os.environ.ge
 backup_dir = CONFIG_DIR / "backups"
 full_backups = FullBackups(backup_dir / "full")
 
-app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None)
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    task = asyncio.create_task(backup_schedule.loop())  # does nothing until a schedule is switched on
+    try:
+        yield
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 log = logging.getLogger("uvicorn.error")
 app.add_middleware(GZipMiddleware, minimum_size=1024)  # app.js is 51 KB, exports and previews can be large
 
@@ -127,6 +140,15 @@ class ParseIn(BaseModel):
     app: str | None = None  # the target's application: a TRaSH profile needs it to resolve its formats
 
 
+class ScheduleIn(BaseModel):
+    enabled: bool = False
+    everyDays: Any = 1  # checked by the schedule itself, which words the problem
+    time: str = "03:00"
+    keep: Any = 7
+    deleteRemote: bool = False
+    instances: list[str] = []
+
+
 class FullRestoreIn(BaseModel):
     backup_id: str
     confirm: bool = False  # a full restore replaces everything on the target: it must be asked for explicitly
@@ -160,6 +182,9 @@ def _clean(body: InstanceIn) -> dict[str, Any]:
     if not body.name.strip():
         raise HTTPException(400, "Name is required")
     return {"name": body.name.strip(), "url": url, "verify_ssl": body.verify_ssl}
+
+
+backup_schedule = BackupSchedule(CONFIG_DIR / "schedule.json", store, full_backups, _client)
 
 
 async def _detect(url: str, api_key: str, verify: bool) -> dict[str, Any]:
@@ -333,7 +358,35 @@ async def list_full_backups():
 async def make_full_backup(iid: str):
     inst = _get(iid)
     async with _client(inst) as c:
-        return await full_backups.create(c, inst["name"])
+        return await full_backups.create(c, inst["name"], instance_id=iid)
+
+
+@app.get("/api/backup-schedule")
+async def get_backup_schedule():
+    return backup_schedule.status()
+
+
+@app.put("/api/backup-schedule")
+async def put_backup_schedule(body: ScheduleIn):
+    return backup_schedule.save(body.model_dump())
+
+
+@app.get("/api/instances/{iid}/remote-backups")
+async def remote_backups(iid: str):
+    async with _client(_get(iid)) as c:
+        return await full_backups.on_instance(c)
+
+
+@app.post("/api/instances/{iid}/remote-backups/{remote_id}/keep")
+async def keep_remote_backup(iid: str, remote_id: int):
+    inst = _get(iid)
+    async with _client(inst) as c:
+        return await full_backups.keep_from_instance(c, inst["name"], remote_id, iid)
+
+
+@app.put("/api/full-backups/upload")
+async def upload_full_backup(request: Request, name: str = "backup.zip"):
+    return await full_backups.add_zip(name, request.stream())
 
 
 @app.get("/api/full-backups/{backup_id}/{kind}")

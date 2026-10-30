@@ -89,7 +89,7 @@ def make_fake(app_name: str = "Radarr", api_key: str = "key", seed: str = "empty
     }
     api = FastAPI()
     api.state.db = db
-    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0")
+    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0", "Prowlarr" if db.get("indexers") is not None else app_name)
 
     def nid() -> int:
         db["next_id"] += 1
@@ -327,7 +327,7 @@ def make_fake_prowlarr(api_key: str = "key", seed: str = "empty") -> FastAPI:
     }
     api = FastAPI()
     api.state.db = db
-    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0")
+    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0", "Prowlarr" if db.get("indexers") is not None else app_name)
 
     def nid() -> int:
         db["next_id"] += 1
@@ -473,7 +473,7 @@ def make_fake_prowlarr(api_key: str = "key", seed: str = "empty") -> FastAPI:
     return api
 
 
-def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str) -> None:
+def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str, app_name: str) -> None:
     """The application's own backup: the Backup command, the list, the file served outside the API, the restore upload.
 
     A backup is a real zip holding the fake's data, so a restore really brings it back. After a restore the app is
@@ -491,7 +491,21 @@ def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str) ->
         with zipfile.ZipFile(buf, "w") as z:
             z.writestr("db.json", json.dumps(data))
             z.writestr("config.xml", f"<Config><ApiKey>{api.state.api_key}</ApiKey></Config>")
+            z.writestr(f"{app_name.lower()}.db", "")  # what the real zips hold, and what Portarr recognises them by
         return buf.getvalue()
+
+    def add_backup(kind: str, name: str | None = None, time: str | None = None) -> dict[str, Any]:
+        """A backup the application holds: its own scheduled ones (`kind` "scheduled") or those made by hand."""
+        bid = len(api.state.backups) + 1 + api.state.backups_made
+        api.state.backups_made += 1
+        name = name or f"{app_name.lower()}_backup_v{api.state.version}_{bid}.zip"
+        api.state.files[name] = snapshot()
+        entry = {"id": bid, "name": name, "path": f"/backup/{kind}/{name}", "type": kind, "size": len(api.state.files[name]),
+                 "time": time or f"2026-10-30T10:{bid % 60:02d}:00Z"}
+        api.state.backups.append(entry)
+        return entry
+
+    api.state.add_backup, api.state.backups_made = add_backup, 0
 
     @api.post(prefix + "/command")
     async def command(request: Request):
@@ -499,13 +513,10 @@ def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str) ->
         cid = len(api.state.commands) + 1
         api.state.commands[cid] = {"id": cid, "name": body["name"], "polls": 0}
         if body["name"] == "Backup":
-            name = f"manual_backup_v{api.state.version}_{cid}.zip"
             if api.state.failing_backup:
                 api.state.commands[cid]["fail"] = True
             else:
-                api.state.files[name] = snapshot()
-                api.state.backups.append({"id": cid, "name": name, "path": f"/backup/manual/{name}", "type": "manual",
-                                          "size": len(api.state.files[name]), "time": f"2026-10-30T10:{cid:02d}:00Z"})
+                add_backup("manual")
         return {"id": cid, "name": body["name"], "status": "queued"}
 
     @api.get(prefix + "/command/{cid}")
@@ -519,6 +530,15 @@ def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str) ->
     @api.get(prefix + "/system/backup")
     async def list_backups():
         return api.state.backups
+
+    @api.delete(prefix + "/system/backup/{bid}")
+    async def delete_backup(bid: int):
+        gone = [b for b in api.state.backups if b["id"] == bid]
+        if not gone:
+            return JSONResponse({"message": "NotFound"}, status_code=404)
+        api.state.backups.remove(gone[0])
+        api.state.files.pop(gone[0]["name"], None)
+        return {}
 
     @api.get("/backup/{kind}/{name}")
     async def backup_file(kind: str, name: str):

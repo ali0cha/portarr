@@ -254,3 +254,97 @@ def test_full_backups_do_not_appear_among_the_configuration_snapshots(client):
     iid = add(client, "src", "ka", "Radarr 4K")
     client.post(f"/api/instances/{iid}/full-backup")
     assert client.get("/api/backups").json() == []  # the snapshots made before each import are a separate list
+
+
+# ------------------------------------------------------------------ bringing a zip in
+
+
+async def chunks(data, size=7):
+    for i in range(0, len(data), size):
+        yield data[i:i + size]
+
+
+async def keep(backups, host, key, name, remote_id):
+    async with ArrClient(f"http://{host}", key) as c:
+        return await backups.keep_from_instance(c, name, remote_id)
+
+
+async def listing(host, key, backups):
+    async with ArrClient(f"http://{host}", key) as c:
+        return await backups.on_instance(c)
+
+
+def test_the_applications_own_backups_are_listed_and_one_can_be_kept(backups, apps):
+    old = apps["src"].state.add_backup("scheduled", "radarr_backup_v4.9.0.1_2026.10.01_03.00.00.zip", "2026-10-01T03:00:00Z")
+    apps["src"].state.add_backup("manual", time="2026-10-20T08:00:00Z")
+    assert [b["time"][:10] for b in run(listing("src", "ka", backups))] == ["2026-10-20", "2026-10-01"]  # newest first
+
+    meta = run(keep(backups, "src", "ka", "Radarr", old["id"]))
+    assert meta["reason"] == "imported" and meta["config"] is False and meta["version"] == "4.9.0.1" and meta["app"] == "radarr"
+    assert meta["createdAt"] == "2026-10-01T03:00:00Z"  # the day it was made, not the day it was kept
+    assert sorted(p.name for p in backups.folder(meta["id"]).iterdir()) == ["backup.zip", "meta.json"]  # no JSON: there is none to take
+    with pytest.raises(PorterError, match="Unknown backup"):
+        backups.file(meta["id"], "config.json")
+    with pytest.raises(PorterError, match="no longer has that backup"):
+        run(keep(backups, "src", "ka", "Radarr", 999))
+    assert backups.list() == [meta]
+
+
+def test_a_kept_backup_restores_like_any_other(backups, apps):
+    old = apps["src"].state.add_backup("scheduled", "radarr_backup_v4.9.0.1_a.zip")
+    kept = run(keep(backups, "src", "ka", "Radarr", old["id"]))
+    apps["src"].state.db["cfs"].clear()
+    result = run(restore(backups, "src", "ka", "Radarr", kept["id"]))
+    assert result["restarted"] is True and len(apps["src"].state.db["cfs"]) == 3
+
+    apps["other"].state.version = "4.0.0"  # an older application cannot take a backup from 4.9.0.1
+    with pytest.raises(PorterError, match="newer than the target's 4.0.0"):
+        run(restore(backups, "other", "kb", "Other", kept["id"]))
+
+
+def test_an_uploaded_zip_is_recognised_by_what_it_contains(backups, apps):
+    data = apps["src"].state.files[apps["src"].state.add_backup("manual")["name"]]
+    meta = run(backups.add_zip("radarr_backup_v5.0.0.1_2026.10.30_09.00.00.zip", chunks(data)))
+    assert meta["app"] == "radarr" and meta["version"] == "5.0.0.1" and meta["reason"] == "uploaded" and meta["config"] is False
+    assert meta["size"] == len(data) == backups.file(meta["id"], "backup.zip").stat().st_size
+    assert meta["instance"].startswith("radarr_backup_v5.0.0.1")
+
+    anonymous = run(backups.add_zip("whatever.zip", chunks(data)))  # no version in the name: the version check is just skipped
+    assert anonymous["app"] == "radarr" and anonymous["version"] is None
+    apps["src"].state.db["cfs"].clear()
+    assert run(restore(backups, "src", "ka", "Radarr", anonymous["id"]))["restarted"] is True
+    assert len(apps["src"].state.db["cfs"]) == 3
+
+
+def test_what_is_not_a_backup_is_refused_and_leaves_nothing_behind(backups, apps, tmp_path, monkeypatch):
+    for bad, message in ((b"hello, I am not a zip", "not a backup zip"),):
+        with pytest.raises(PorterError, match=message):
+            run(backups.add_zip("x.zip", chunks(bad)))
+    import io, zipfile
+    for names, message in ((["notes.txt"], "not a Radarr, Sonarr"), (["radarr.db", "sonarr.db"], "not a Radarr, Sonarr")):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n in names:
+                z.writestr(n, "")
+        with pytest.raises(PorterError, match=message):
+            run(backups.add_zip("x.zip", chunks(buf.getvalue())))
+    monkeypatch.setattr("app.fullbackup.MAX_UPLOAD", 10)
+    with pytest.raises(PorterError, match="too large"):
+        run(backups.add_zip("big.zip", chunks(b"x" * 50)))
+    assert backups.list() == [] and list((tmp_path / "full").iterdir()) == []
+
+
+def test_the_api_lists_keeps_and_accepts_zips(client, apps):
+    iid = add(client, "src", "ka", "Radarr HD")
+    entry = apps["src"].state.add_backup("scheduled", "radarr_backup_v4.9.0.1_a.zip")
+    listed = client.get(f"/api/instances/{iid}/remote-backups")
+    assert listed.status_code == 200 and [b["name"] for b in listed.json()] == ["radarr_backup_v4.9.0.1_a.zip"]
+    kept = client.post(f"/api/instances/{iid}/remote-backups/{entry['id']}/keep")
+    assert kept.status_code == 200 and kept.json()["reason"] == "imported" and kept.json()["instanceId"] == iid
+    assert client.post(f"/api/instances/{iid}/remote-backups/999/keep").status_code == 400
+
+    data = apps["src"].state.files[entry["name"]]
+    up = client.put("/api/full-backups/upload?name=radarr_backup_v5.0.0_x.zip", content=data)
+    assert up.status_code == 200 and up.json()["reason"] == "uploaded"
+    assert client.put("/api/full-backups/upload?name=x.zip", content=b"nope").status_code == 400
+    assert {m["reason"] for m in client.get("/api/full-backups").json()} == {"imported", "uploaded"}

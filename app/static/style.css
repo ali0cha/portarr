@@ -193,7 +193,7 @@ h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin: 0 0 12px; }
 .spread { justify-content: space-between; }
 label.field { display: block; font-size: 13px; color: var(--inkMuted); margin-bottom: 12px; }
 label.field > span { display: block; margin-bottom: 4px; }
-input[type=text], input[type=password], input[type=url], select, textarea {
+input[type=text], input[type=password], input[type=url], input[type=number], input[type=time], select, textarea {
   width: 100%; padding: 8px 10px; border: 1px solid var(--hairlineStrong); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit;
   box-shadow: inset 0 1px 1px var(--cardShadow);
 }

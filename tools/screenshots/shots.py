@@ -21,8 +21,8 @@ INSTANCES = [("Radarr HD", 7001), ("Radarr 4K", 7002), ("Sonarr TV", 7003), ("Li
              ("Whisparr", 7007), ("Prowlarr main", 7009), ("Prowlarr new", 7010)]
 
 TEXT = {
-    "en": dict(locale="en-US", trash="TRaSH Guides", other="Another instance", indexers="Indexers", done="Done", backup_now="Back up now", restore="Restore…"),
-    "fr": dict(locale="fr-FR", trash="TRaSH Guides", other="Une autre instance", indexers="Indexeurs", done="Terminé", backup_now="Sauvegarder maintenant", restore="Restaurer…"),
+    "en": dict(locale="en-US", trash="TRaSH Guides", other="Another instance", indexers="Indexers", done="Done", backup_now="Back up now", restore="Restore…", sched="Scheduled backups", sched_save="Save the schedule"),
+    "fr": dict(locale="fr-FR", trash="TRaSH Guides", other="Une autre instance", indexers="Indexeurs", done="Terminé", backup_now="Sauvegarder maintenant", restore="Restaurer…", sched="Sauvegardes planifiées", sched_save="Enregistrer la planification"),
 }[LANG]
 
 
@@ -122,7 +122,19 @@ def main() -> None:
         page.locator("#view button", has_text=TEXT["restore"]).first.click()
         page.wait_for_selector(".danger-zone")
         page.wait_for_timeout(400)
+        scroll_to("#view table", offset=130)  # the list and the restore panel under it
         shot("07-full-backup", 1100)  # tall enough to show the whole restore panel
+
+        # 8. scheduled backups: every night, for the two Radarr instances
+        page.wait_for_timeout(4200)  # let the "backup saved" notice go away: the next picture has its own
+        card = page.locator("#view .card", has_text=TEXT["sched"])
+        for i in range(3):  # "back up automatically", then the first two instances
+            card.locator("input[type=checkbox]").nth(i).check()
+        card.locator("button", has_text=TEXT["sched_save"]).click()
+        page.wait_for_selector(".toast")
+        page.wait_for_timeout(600)
+        scroll_to("#view .card:has(h3)", offset=95, has_text=TEXT["sched"])
+        shot("08-scheduled-backups", TALL)
 
         browser.close()
 

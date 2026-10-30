@@ -17,6 +17,9 @@ First release.
 - Full backup and restore of a whole instance: Portarr triggers the application's own backup, downloads it and keeps it
   with a JSON export of the configuration. A full restore sends the zip back and waits for the restart, after backing
   up the target the same way; a selective restore opens the import with the JSON loaded.
+- Scheduled full backups (every N days at a time, for the instances you choose, keeping the last few of each; only the
+  scheduled ones are ever rotated out), an option to remove the copy the application keeps, and a way to bring in
+  the application's own backups or a zip from another machine.
 - A preview of every change before anything is written, an automatic backup of the target, and nothing is
   ever deleted. Exports never contain an API key or a password.
 - Step-by-step web interface in English and French (light and dark theme), with the version and build in the
