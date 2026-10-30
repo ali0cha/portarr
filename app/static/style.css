@@ -242,6 +242,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .err { color: var(--dangerInk); font-size: 13px; margin: 3px 0 0 26px; }
 .summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
 table { width: 100%; border-collapse: collapse; }
+.card.danger-zone { border-color: color-mix(in oklch, var(--danger) 55%, var(--hairline)); }
+.card.warnbox { border-color: var(--warning); background: color-mix(in oklch, var(--warning) 12%, var(--paperCard)); }
 td, th { text-align: left; padding: 8px 6px; border-top: 1px solid var(--hairline); font-size: 14px; }
 th { color: var(--inkMuted); font-weight: 500; border-top: 0; }
 

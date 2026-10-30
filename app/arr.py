@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable
+from pathlib import Path
 from typing import Any, ClassVar
 
 import httpx
@@ -36,6 +37,18 @@ def _error_message(resp: httpx.Response) -> str:
     if isinstance(data, dict):
         return data.get("message") or data.get("errorMessage") or f"HTTP {resp.status_code}"
     return f"HTTP {resp.status_code}"
+
+
+def _raise_for(resp: httpx.Response, path: str) -> None:
+    """Turns an unsuccessful response into an ArrError that says what to check."""
+    if 300 <= resp.status_code < 400:
+        raise ArrError("Redirected: check the URL (http vs https, URL base)", resp.status_code)
+    if resp.status_code == 401:
+        raise ArrError("Unauthorized: check the API key", 401)
+    if resp.status_code == 404 and path.startswith("system/status"):
+        raise ArrError("API not found: check the URL base, and that this is Radarr, Sonarr, Lidarr, Whisparr or Prowlarr", 404)
+    if resp.status_code >= 400:
+        raise ArrError(_error_message(resp), resp.status_code)
 
 
 async def gather(*aws: Awaitable[Any]) -> list[Any]:
@@ -78,20 +91,48 @@ class ArrClient:
             resp = await self._http.request(method, f"/api/{self.api}/{path.lstrip('/')}", json=json)
         except (httpx.HTTPError, httpx.InvalidURL) as e:
             raise ArrError(f"Cannot reach {self._http.base_url}: {e.__class__.__name__}: {e}") from e
-        if 300 <= resp.status_code < 400:
-            raise ArrError("Redirected: check the URL (http vs https, URL base)", resp.status_code)
-        if resp.status_code == 401:
-            raise ArrError("Unauthorized: check the API key", 401)
-        if resp.status_code == 404 and path.startswith("system/status"):
-            raise ArrError("API not found: check the URL base, and that this is Radarr, Sonarr, Lidarr, Whisparr or Prowlarr", 404)
-        if resp.status_code >= 400:
-            raise ArrError(_error_message(resp), resp.status_code)
+        _raise_for(resp, path)
         if not resp.content:
             return None
         try:
             return resp.json()
         except ValueError as e:
             raise ArrError("Response is not JSON: check the URL (and URL base)") from e
+
+    async def download(self, path: str, dest: Path) -> int:
+        """Streams a file the application serves outside its API (its backups) into `dest`; returns its size.
+
+        `path` is what the application reports. It may or may not already include the URL base, which the
+        client adds itself."""
+        base = self._http.base_url.path.rstrip("/")
+        rel = path[len(base):] if base and path.startswith(base + "/") else path
+        size = 0
+        try:
+            async with self._http.stream("GET", rel) as resp:
+                if resp.status_code >= 300:
+                    await resp.aread()
+                    _raise_for(resp, rel)
+                with dest.open("wb") as out:
+                    async for chunk in resp.aiter_bytes(65536):
+                        out.write(chunk)
+                        size += len(chunk)
+        except (httpx.HTTPError, httpx.InvalidURL) as e:
+            raise ArrError(f"Cannot reach {self._http.base_url}: {e.__class__.__name__}: {e}") from e
+        return size
+
+    async def upload(self, path: str, file: Path, timeout: float = 600.0) -> Any:
+        """POSTs a file as multipart form data to an API path (restoring a backup)."""
+        try:
+            with file.open("rb") as f:
+                resp = await self._http.post(f"/api/{self.api}/{path.lstrip('/')}", files={"file": (file.name, f, "application/zip")},
+                                             timeout=timeout)
+        except (httpx.HTTPError, httpx.InvalidURL) as e:
+            raise ArrError(f"Cannot reach {self._http.base_url}: {e.__class__.__name__}: {e}") from e
+        _raise_for(resp, path)
+        try:
+            return resp.json() if resp.content else None
+        except ValueError:
+            return None
 
     async def get(self, path: str) -> Any:
         return await self.request("GET", path)

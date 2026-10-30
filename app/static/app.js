@@ -29,6 +29,20 @@ const I18N = {
     a_create: "new", a_update: "update", a_unchanged: "identical", a_skip: "skipped", s_ok: "done", s_error: "error",
     bk_hint: "Automatic snapshots of an instance taken just before each import. To roll back, import one of these files with “overwrite” enabled (items created by the import are not deleted).",
     bk_empty: "No backup yet.", date: "Date", size: "Size", file: "File",
+    bk_page_hint: "Back up a whole instance and restore it, or find the snapshots Portarr takes before each import.", bk_snap_title: "Configuration snapshots",
+    fb_title: "Full backup", fb_hint: "Portarr asks the application for its own backup (database, settings, API key, indexer passwords, history), downloads it and keeps it here, together with a JSON export of the configuration.",
+    fb_now: "Back up now", fb_running: "Backing up… this can take a minute", fb_done: "Backup of {0} saved.",
+    fb_secret: "A full backup contains your API keys and passwords: keep it private.",
+    fb_list: "Full backups", fb_none: "No full backup yet.", fb_before_restore: "before a restore",
+    fb_restore: "Restore…", fb_restore_of: "Restore {0}", fb_delete_confirm: "Delete the backup {0}? This cannot be undone.", fb_close: "Close",
+    fb_full_title: "Full restore", fb_full_hint: "Replaces everything on the instance with the content of the zip (database, settings, API key) and restarts it. Its current state is backed up first, so this can be undone with another restore.",
+    fb_target: "Restore onto", fb_no_target: "There is no {0} instance to restore onto.", fb_ack: "I understand that everything on {0} will be replaced",
+    fb_restore_btn: "Restore everything", fb_restoring: "Restoring… the application restarts", fb_confirm: "Replace everything on “{0}” with the backup “{1}”, then restart it?",
+    fb_restored: "{0} was restored and restarted. Its previous state was saved as {1}.",
+    fb_restored_wait: "The backup was sent to {0}, but its restart was not seen: check the application in a minute. Its previous state was saved as {1}.",
+    fb_key_changed: "The restored backup has another API key: edit the instance {0} in Portarr and enter the application's current key.",
+    fb_sel_title: "Selective restore", fb_sel_hint: "Choose what to bring back from the JSON export, with the usual preview. Nothing is replaced wholesale.", fb_sel_btn: "Choose what to restore…",
+    fb_dl_zip: "Download the zip", fb_dl_json: "Download the JSON",
     changes: "{0} change(s)", loading: "Loading…",
     exp_step1: "Instance", exp_step2: "Content", exp_step3: "File",
     exp_pick_title: "Instance to export from", exp_content_title: "What to include",
@@ -87,6 +101,20 @@ const I18N = {
     a_create: "nouveau", a_update: "mise à jour", a_unchanged: "identique", a_skip: "ignoré", s_ok: "fait", s_error: "erreur",
     bk_hint: "Instantanés automatiques d'une instance pris juste avant chaque import. Pour revenir en arrière, importez l'un de ces fichiers avec « écraser » activé (les éléments créés par l'import ne sont pas supprimés).",
     bk_empty: "Aucune sauvegarde.", date: "Date", size: "Taille", file: "Fichier",
+    bk_page_hint: "Sauvegardez une instance en entier et restaurez-la, ou retrouvez les instantanés que Portarr prend avant chaque import.", bk_snap_title: "Instantanés de configuration",
+    fb_title: "Sauvegarde complète", fb_hint: "Portarr demande à l'application sa propre sauvegarde (base de données, réglages, clé API, mots de passe des indexeurs, historique), la télécharge et la garde ici, avec un export JSON de la configuration.",
+    fb_now: "Sauvegarder maintenant", fb_running: "Sauvegarde… cela peut prendre une minute", fb_done: "Sauvegarde de {0} enregistrée.",
+    fb_secret: "Une sauvegarde complète contient vos clés API et vos mots de passe : gardez-la privée.",
+    fb_list: "Sauvegardes complètes", fb_none: "Aucune sauvegarde complète pour l'instant.", fb_before_restore: "avant une restauration",
+    fb_restore: "Restaurer…", fb_restore_of: "Restaurer {0}", fb_delete_confirm: "Supprimer la sauvegarde {0} ? C'est définitif.", fb_close: "Fermer",
+    fb_full_title: "Restauration complète", fb_full_hint: "Remplace tout sur l'instance par le contenu du zip (base de données, réglages, clé API) et la redémarre. Son état actuel est d'abord sauvegardé : on peut donc annuler par une autre restauration.",
+    fb_target: "Restaurer sur", fb_no_target: "Il n'y a aucune instance {0} sur laquelle restaurer.", fb_ack: "Je comprends que tout sera remplacé sur {0}",
+    fb_restore_btn: "Tout restaurer", fb_restoring: "Restauration… l'application redémarre", fb_confirm: "Remplacer tout sur « {0} » par la sauvegarde « {1} », puis la redémarrer ?",
+    fb_restored: "{0} a été restaurée et redémarrée. Son état précédent est sauvegardé sous {1}.",
+    fb_restored_wait: "La sauvegarde a été envoyée à {0}, mais son redémarrage n'a pas été constaté : vérifiez l'application dans une minute. Son état précédent est sauvegardé sous {1}.",
+    fb_key_changed: "La sauvegarde restaurée a une autre clé API : modifiez l'instance {0} dans Portarr et saisissez la clé actuelle de l'application.",
+    fb_sel_title: "Restauration sélective", fb_sel_hint: "Choisissez ce qu'il faut récupérer de l'export JSON, avec l'aperçu habituel. Rien n'est remplacé en bloc.", fb_sel_btn: "Choisir quoi restaurer…",
+    fb_dl_zip: "Télécharger le zip", fb_dl_json: "Télécharger le JSON",
     changes: "{0} changement(s)", loading: "Chargement…",
     exp_step1: "Instance", exp_step2: "Contenu", exp_step3: "Fichier",
     exp_pick_title: "Instance à exporter", exp_content_title: "Ce qu'il faut inclure",
@@ -212,6 +240,7 @@ async function busy(btn, label, fn) {
   try { return await fn(); } catch (e) { toast(e.message, "error"); } finally { btn.disabled = false; lbl.textContent = original; }
 }
 
+const fmtSize = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
 const slug = (s) => String(s).replace(/[^A-Za-z0-9._-]+/g, "_");
 const SECTIONS = ["customFormats", "qualityProfiles", "metadataProfiles", "qualityDefinitions", "naming", "mediaManagement", "appProfiles", "indexerProxies", "indexers"];
@@ -870,10 +899,53 @@ function importResult() {
 }
 
 // ---------------------------------------------------------------- backups
+// Full backups (the application's own zip + Portarr's JSON) on top, then the snapshots taken before each import.
 async function viewBackups() {
+  const bk = (S.bk ??= { open: "", make: "", target: "", ack: false, notice: null });
   tools.set([toolBtn("refresh", t("refresh"), () => render())]);
-  const files = await api("/api/backups");
-  return h("div", null, h("h2", null, t("tab_backups")), h("p", { class: "hint" }, t("bk_hint")),
+  const [full, files] = await Promise.all([api("/api/full-backups"), api("/api/backups")]);
+
+  const notice = bk.notice ? h("div", { class: `card note ${bk.notice.kind === "warn" ? "warnbox" : ""}` },
+    h("div", { class: "row" }, h("div", { class: "grow" }, bk.notice.lines.map(([key, ...args]) => h("div", null, t(key, ...args)))),
+      h("button", { onclick: () => { bk.notice = null; render(); } }, t("fb_close")))) : null;
+
+  let makeCard = null;
+  if (S.instances.length) {
+    const sel = instanceSelect(bk.make, (v) => { bk.make = v; });
+    bk.make = sel.value;
+    makeCard = h("div", { class: "card" }, h("h3", null, t("fb_title")), h("p", { class: "hint", style: "margin:0 0 10px" }, t("fb_hint")),
+      h("div", { class: "row" }, h("div", { class: "grow" }, sel),
+        h("button", { class: "primary", onclick: (e) => busy(e.currentTarget, t("fb_running"), async () => {
+          const m = await api(`/api/instances/${bk.make}/full-backup`, { method: "POST" });
+          bk.notice = null;
+          toast(t("fb_done", m.instance), "ok");
+          render();
+        }) }, icon("archive"), " ", h("span", { class: "lbl" }, t("fb_now")))),
+      h("p", { class: "hint", style: "margin:10px 0 0" }, t("fb_secret")));
+  }
+
+  const rows = full.map((m) => h("tr", null,
+    h("td", null, new Date(m.createdAt).toLocaleString(lang)),
+    h("td", null, h("div", { class: "row", style: "gap:6px" }, h("strong", { class: "name" }, m.instance), h("span", { class: `badge b-${m.app}` }, cap(m.app)),
+      m.reason === "before-restore" ? h("span", { class: "badge" }, t("fb_before_restore")) : null)),
+    h("td", null, m.version ?? ""),
+    h("td", null, fmtSize(m.size)),
+    h("td", null, h("div", { class: "row", style: "gap:6px;justify-content:flex-end" },
+      h("button", { onclick: () => { Object.assign(bk, { open: bk.open === m.id ? "" : m.id, target: "", ack: false }); render(); } }, t("fb_restore")),
+      h("button", { class: "danger", onclick: async () => {
+        if (!confirm(t("fb_delete_confirm", m.id))) return;
+        try { await api(`/api/full-backups/${encodeURIComponent(m.id)}`, { method: "DELETE" }); if (bk.open === m.id) bk.open = ""; render(); } catch (e) { toast(e.message, "error"); }
+      } }, t("delete"))))));
+  const open = full.find((m) => m.id === bk.open);
+
+  return h("div", null, h("h2", null, t("tab_backups")), h("p", { class: "hint" }, t("bk_page_hint")), notice, makeCard,
+    h("h3", { style: "margin:18px 0 8px" }, t("fb_list")),
+    full.length
+      ? h("div", { class: "card", style: "overflow-x:auto" }, h("table", null,
+        h("tr", null, h("th", null, t("date")), h("th", null, t("instance")), h("th", null, "Version"), h("th", null, t("size")), h("th", null)), rows))
+      : h("p", { class: "hint" }, t("fb_none")),
+    open ? restorePanel(open, bk) : null,
+    h("h3", { style: "margin:22px 0 4px" }, t("bk_snap_title")), h("p", { class: "hint" }, t("bk_hint")),
     files.length
       ? h("div", { class: "card" }, h("table", null,
         h("tr", null, h("th", null, t("file")), h("th", null, t("date")), h("th", null, t("size"))),
@@ -882,6 +954,45 @@ async function viewBackups() {
           h("td", null, new Date(f.mtime * 1000).toLocaleString(lang)),
           h("td", null, `${Math.max(1, Math.round(f.size / 1024))} KB`)))))
       : h("p", { class: "hint" }, t("bk_empty")));
+}
+
+// What can be done with one full backup: restore it entirely (the zip), or pick things out of its JSON.
+function restorePanel(m, bk) {
+  const targets = S.instances.filter((i) => i.app === m.app);
+  const sel = instanceSelect(bk.target || targets.find((i) => i.name === m.instance)?.id, (v) => { bk.target = v; render(); }, null, m.app);
+  bk.target = sel.value;
+  const target = targets.find((i) => i.id === bk.target);
+  const run = h("button", { class: "danger", disabled: !target || !bk.ack, onclick: (e) => {
+    if (!confirm(t("fb_confirm", target.name, m.id))) return;
+    return busy(e.currentTarget, t("fb_restoring"), async () => {
+      const r = await api(`/api/instances/${target.id}/full-restore`, { method: "POST", body: { backup_id: m.id, confirm: true } });
+      // kept as keys, not as text, so the notice follows a change of language
+      bk.notice = { kind: r.apiKeyChanged || !r.restarted ? "warn" : "ok",
+        lines: [[r.restarted ? "fb_restored" : "fb_restored_wait", target.name, r.safety], r.apiKeyChanged ? ["fb_key_changed", target.name] : null].filter(Boolean) };
+      bk.open = ""; bk.ack = false;
+      render();
+    });
+  } }, h("span", { class: "lbl" }, t("fb_restore_btn")));
+  const selective = async () => {
+    const text = await (await fetch(`/api/full-backups/${encodeURIComponent(m.id)}/config`)).text();
+    Object.assign(S.imp, { step: 1, mode: "file", text, fileName: `${m.id}.json`, sourceLabel: "", targetId: target.id, overwrite: true, bundle: null, plan: null, sel: {}, result: null });
+    S.tab = "import";
+    render();
+  };
+
+  return h("div", { class: "card danger-zone" },
+    h("h3", null, t("fb_restore_of", m.id)),
+    h("div", { class: "row", style: "gap:14px;margin-bottom:12px" },
+      h("a", { href: `/api/full-backups/${encodeURIComponent(m.id)}/zip`, download: `${m.id}.zip` }, t("fb_dl_zip")),
+      h("a", { href: `/api/full-backups/${encodeURIComponent(m.id)}/config`, download: `${m.id}.json` }, t("fb_dl_json"))),
+    targets.length ? h("label", { class: "field" }, h("span", null, t("fb_target")), sel) : h("p", { class: "err", style: "margin:0 0 10px" }, t("fb_no_target", cap(m.app))),
+    h("h4", { style: "margin:4px 0 4px" }, t("fb_sel_title")), h("p", { class: "hint", style: "margin:0 0 8px" }, t("fb_sel_hint")),
+    h("div", { style: "margin-bottom:16px" }, h("button", { disabled: !target, onclick: (e) => busy(e.currentTarget, "…", selective) }, t("fb_sel_btn"))),
+    h("h4", { style: "margin:4px 0 4px" }, t("fb_full_title")), h("p", { class: "hint", style: "margin:0 0 8px" }, t("fb_full_hint")),
+    h("label", { class: "row", style: "gap:8px;margin-bottom:10px;cursor:pointer" },
+      h("input", { type: "checkbox", checked: bk.ack, onchange: (e) => { bk.ack = e.target.checked; run.disabled = !bk.ack || !target; } }),
+      h("span", null, t("fb_ack", target?.name ?? ""))),
+    run);
 }
 
 // Version and build, bottom of the sidebar: tells whether the NAS really runs the latest image.

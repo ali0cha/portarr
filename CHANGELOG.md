@@ -14,6 +14,9 @@ First release.
 - Import of TRaSH Guides quality profiles (Radarr and Sonarr), from the catalogue or from pasted JSON, with
   their mandatory formats, optional groups and scores, and of their quality sizes and naming schemes, alone or
   together with a profile.
+- Full backup and restore of a whole instance: Portarr triggers the application's own backup, downloads it and keeps it
+  with a JSON export of the configuration. A full restore sends the zip back and waits for the restart, after backing
+  up the target the same way; a selective restore opens the import with the JSON loaded.
 - A preview of every change before anything is written, an automatic backup of the target, and nothing is
   ever deleted. Exports never contain an API key or a password.
 - Step-by-step web interface in English and French (light and dark theme), with the version and build in the

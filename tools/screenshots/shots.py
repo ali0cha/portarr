@@ -21,8 +21,8 @@ INSTANCES = [("Radarr HD", 7001), ("Radarr 4K", 7002), ("Sonarr TV", 7003), ("Li
              ("Whisparr", 7007), ("Prowlarr main", 7009), ("Prowlarr new", 7010)]
 
 TEXT = {
-    "en": dict(locale="en-US", trash="TRaSH Guides", other="Another instance", indexers="Indexers", done="Done"),
-    "fr": dict(locale="fr-FR", trash="TRaSH Guides", other="Une autre instance", indexers="Indexeurs", done="Terminé"),
+    "en": dict(locale="en-US", trash="TRaSH Guides", other="Another instance", indexers="Indexers", done="Done", backup_now="Back up now", restore="Restore…"),
+    "fr": dict(locale="fr-FR", trash="TRaSH Guides", other="Une autre instance", indexers="Indexeurs", done="Terminé", backup_now="Sauvegarder maintenant", restore="Restaurer…"),
 }[LANG]
 
 
@@ -112,6 +112,17 @@ def main() -> None:
         page.wait_for_timeout(500)
         scroll_to("#view details.section > summary", offset=150, has_text=re.compile(rf"^\s*{TEXT['indexers']}\s*\d"))  # the title is followed by its "2 / 2" counter
         shot("06-prowlarr-secrets")
+
+        # 7. a full backup of an instance, and the choices to restore it
+        tab(3)
+        page.wait_for_selector("#view select")
+        page.locator("#view select").first.select_option(label="Radarr 4K (Radarr)")
+        page.locator("#view button.primary", has_text=TEXT["backup_now"]).click()
+        page.wait_for_selector("#view table")
+        page.locator("#view button", has_text=TEXT["restore"]).first.click()
+        page.wait_for_selector(".danger-zone")
+        page.wait_for_timeout(400)
+        shot("07-full-backup", 1100)  # tall enough to show the whole restore panel
 
         browser.close()
 

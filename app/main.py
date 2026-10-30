@@ -23,6 +23,7 @@ from .arr import ArrClient, ArrError
 from .porter import FORMAT, VERSION, Importer, PorterError, export_bundle, parse_bundle
 from .trash import (DEFAULT_URL, TrashCatalog, build_bundle, default_selection, is_trash_profile, is_trash_sizes, list_naming,
                     list_profiles, list_sizes, profile_detail, profile_from_catalog, size_definitions)
+from .fullbackup import FullBackups
 from .store import InstanceStore, public
 from .updates import UpdateChecker
 
@@ -48,6 +49,7 @@ updates = UpdateChecker(
     enabled=os.environ.get("PORTARR_UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off"))
 catalog = TrashCatalog(CONFIG_DIR / "cache" / "trash-guides.json", os.environ.get("TRASH_GUIDES_URL", DEFAULT_URL))
 backup_dir = CONFIG_DIR / "backups"
+full_backups = FullBackups(backup_dir / "full")
 
 app = FastAPI(title="Portarr", docs_url=None, redoc_url=None, openapi_url=None)
 log = logging.getLogger("uvicorn.error")
@@ -123,6 +125,11 @@ class ImportIn(BaseModel):
 class ParseIn(BaseModel):
     text: str
     app: str | None = None  # the target's application: a TRaSH profile needs it to resolve its formats
+
+
+class FullRestoreIn(BaseModel):
+    backup_id: str
+    confirm: bool = False  # a full restore replaces everything on the target: it must be asked for explicitly
 
 
 class TrashBuildIn(BaseModel):
@@ -315,6 +322,42 @@ async def get_backup(name: str):
     if not path.is_file():
         raise HTTPException(404, "Unknown backup")
     return FileResponse(path, media_type="application/json", filename=name)
+
+
+@app.get("/api/full-backups")
+async def list_full_backups():
+    return full_backups.list()
+
+
+@app.post("/api/instances/{iid}/full-backup")
+async def make_full_backup(iid: str):
+    inst = _get(iid)
+    async with _client(inst) as c:
+        return await full_backups.create(c, inst["name"])
+
+
+@app.get("/api/full-backups/{backup_id}/{kind}")
+async def download_full_backup(backup_id: str, kind: str):
+    if kind == "zip":
+        return FileResponse(full_backups.file(backup_id, "backup.zip"), media_type="application/zip", filename=f"{backup_id}.zip")
+    if kind == "config":
+        return FileResponse(full_backups.file(backup_id, "config.json"), media_type="application/json", filename=f"{backup_id}.json")
+    raise HTTPException(404, "Unknown backup file")
+
+
+@app.delete("/api/full-backups/{backup_id}")
+async def delete_full_backup(backup_id: str):
+    full_backups.delete(backup_id)
+    return {"ok": True}
+
+
+@app.post("/api/instances/{iid}/full-restore")
+async def full_restore(iid: str, body: FullRestoreIn):
+    if not body.confirm:
+        raise PorterError("A full restore replaces everything on the instance and restarts it: confirm it explicitly")
+    inst = _get(iid)
+    async with _client(inst) as c:
+        return await full_backups.restore(c, inst["name"], body.backup_id)
 
 
 class Assets(StaticFiles):

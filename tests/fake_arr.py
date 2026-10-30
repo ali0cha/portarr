@@ -8,12 +8,15 @@ scores that reference real custom format ids.  Also runnable as a demo server:
 from __future__ import annotations
 
 import copy
+import io
+import json
+import zipfile
 import sys
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 QUALITIES = [
     (4, "HDTV-720p"), (5, "WEBDL-720p"), (6, "Bluray-720p"), (3, "WEBDL-1080p"),
@@ -86,6 +89,7 @@ def make_fake(app_name: str = "Radarr", api_key: str = "key", seed: str = "empty
     }
     api = FastAPI()
     api.state.db = db
+    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0")
 
     def nid() -> int:
         db["next_id"] += 1
@@ -119,13 +123,16 @@ def make_fake(app_name: str = "Radarr", api_key: str = "key", seed: str = "empty
 
     @api.middleware("http")
     async def auth(request: Request, call_next):
-        if request.headers.get("x-api-key") != api_key:
+        if request.headers.get("x-api-key") != api.state.api_key:
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
     @api.get(P + "/system/status")
     async def status():
-        return {"appName": app_name, "version": "5.0.0", "instanceName": app_name}
+        if api.state.down:  # restarting after a restore
+            api.state.down -= 1
+            return JSONResponse({"message": "Starting"}, status_code=503)
+        return {"appName": app_name, "version": api.state.version, "instanceName": app_name}
 
     @api.get(P + "/customformat")
     async def list_cf():
@@ -320,6 +327,7 @@ def make_fake_prowlarr(api_key: str = "key", seed: str = "empty") -> FastAPI:
     }
     api = FastAPI()
     api.state.db = db
+    add_backups(api, db, api_key, "1.30.0" if db.get("indexers") is not None else "5.0.0")
 
     def nid() -> int:
         db["next_id"] += 1
@@ -365,13 +373,16 @@ def make_fake_prowlarr(api_key: str = "key", seed: str = "empty") -> FastAPI:
 
     @api.middleware("http")
     async def auth(request: Request, call_next):
-        if request.headers.get("x-api-key") != api_key:
+        if request.headers.get("x-api-key") != api.state.api_key:
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
     @api.get("/api/v1/system/status")
     async def status():
-        return {"appName": "Prowlarr", "version": "1.30.0", "instanceName": "Prowlarr"}
+        if api.state.down:
+            api.state.down -= 1
+            return JSONResponse({"message": "Starting"}, status_code=503)
+        return {"appName": "Prowlarr", "version": api.state.version, "instanceName": "Prowlarr"}
 
     @api.get("/api/v1/tag")
     async def tags():
@@ -460,6 +471,78 @@ def make_fake_prowlarr(api_key: str = "key", seed: str = "empty") -> FastAPI:
         pub.update(id=61, name="PublicHD", priority=25, tags=[51])
         db["indexers"].append(pub)
     return api
+
+
+def add_backups(api: FastAPI, db: dict[str, Any], api_key: str, version: str) -> None:
+    """The application's own backup: the Backup command, the list, the file served outside the API, the restore upload.
+
+    A backup is a real zip holding the fake's data, so a restore really brings it back. After a restore the app is
+    "down" for `api.state.down` status calls, and it comes back with `api.state.restored_key` if one is set."""
+    api.state.api_key, api.state.version, api.state.down = api_key, version, 0
+    api.state.backups, api.state.files, api.state.commands, api.state.restored_key = [], {}, {}, None
+    api.state.command_polls = 0  # status calls answered "started" before "completed"
+    api.state.failing_backup, api.state.restores = False, 0
+    api.state.down_after_restore = 2  # status calls that fail after a restore: 0 = never goes down, huge = never comes back
+    prefix = "/api/v1" if "indexers" in db else "/api/v3"
+
+    def snapshot() -> bytes:
+        data = {k: v for k, v in db.items() if k not in ("secrets", "saves")}
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("db.json", json.dumps(data))
+            z.writestr("config.xml", f"<Config><ApiKey>{api.state.api_key}</ApiKey></Config>")
+        return buf.getvalue()
+
+    @api.post(prefix + "/command")
+    async def command(request: Request):
+        body = await request.json()
+        cid = len(api.state.commands) + 1
+        api.state.commands[cid] = {"id": cid, "name": body["name"], "polls": 0}
+        if body["name"] == "Backup":
+            name = f"manual_backup_v{api.state.version}_{cid}.zip"
+            if api.state.failing_backup:
+                api.state.commands[cid]["fail"] = True
+            else:
+                api.state.files[name] = snapshot()
+                api.state.backups.append({"id": cid, "name": name, "path": f"/backup/manual/{name}", "type": "manual",
+                                          "size": len(api.state.files[name]), "time": f"2026-10-30T10:{cid:02d}:00Z"})
+        return {"id": cid, "name": body["name"], "status": "queued"}
+
+    @api.get(prefix + "/command/{cid}")
+    async def command_status(cid: int):
+        c = api.state.commands[cid]
+        c["polls"] += 1
+        if c.get("fail"):
+            return {"id": cid, "name": c["name"], "status": "failed", "message": "Disk full"}
+        return {"id": cid, "name": c["name"], "status": "started" if c["polls"] <= api.state.command_polls else "completed"}
+
+    @api.get(prefix + "/system/backup")
+    async def list_backups():
+        return api.state.backups
+
+    @api.get("/backup/{kind}/{name}")
+    async def backup_file(kind: str, name: str):
+        if name not in api.state.files:
+            return JSONResponse({"message": "NotFound"}, status_code=404)
+        return Response(api.state.files[name], media_type="application/zip")
+
+    @api.post(prefix + "/system/backup/restore/upload")
+    async def restore_upload(request: Request):
+        # a multipart body, read by hand: the real thing does not need python-multipart here either
+        boundary = request.headers["content-type"].split("boundary=")[1].encode()
+        part = (await request.body()).split(b"--" + boundary)[1]
+        content = part.split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n", 1)[0]
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as z:
+                data = json.loads(z.read("db.json"))
+        except (zipfile.BadZipFile, KeyError):
+            return JSONResponse({"message": "Invalid backup"}, status_code=400)
+        db.update(data)
+        api.state.restores += 1
+        api.state.down = api.state.down_after_restore
+        if api.state.restored_key:
+            api.state.api_key = api.state.restored_key
+        return {"restartRequired": True}
 
 
 class Router(httpx.AsyncBaseTransport):

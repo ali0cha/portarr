@@ -21,13 +21,14 @@ Portarr est un petit outil web qui **exporte et importe la configuration qualit�
 - **Aperçu d'abord.** Chaque import liste ce qui sera créé, modifié ou ignoré, champ par champ. Vous décochez ce que vous ne voulez pas.
 - **Sauvegarde automatique** de la cible, faite juste avant toute écriture. Si elle échoue, rien n'est modifié.
 - **Ne supprime jamais** rien sur la cible.
+- **Sauvegardes et restaurations complètes** d'une instance entière (la sauvegarde propre de l'application, avec un export JSON de sa configuration), conservées dans Portarr.
 - **Sans risque à partager.** Les exports ne contiennent ni clé API ni mot de passe, et les clés de vos instances ne quittent jamais le serveur.
 - **Une application vers la même application** uniquement : un export Sonarr est refusé sur Radarr.
 - Interface en anglais et en français (sélecteur dans l'en-tête), thème clair et sombre, et le type d'application est détecté à l'ajout d'une instance.
 
 Compatible avec Radarr v4+/v5+, Sonarr v4+, Whisparr v2 et v3 « Eros » (API v3), Lidarr et Prowlarr (API v1).
 
-> Lidarr et Prowlarr ont été validés contre des simulations de leurs spécifications OpenAPI officielles, et Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification). Aucun n'a encore été essayé sur une vraie instance. Lisez toujours l'aperçu ; la sauvegarde automatique couvre le reste.
+> Lidarr et Prowlarr ont été validés contre des simulations de leurs spécifications OpenAPI officielles, et Whisparr contre une simulation fondée sur son code source (il ne publie pas de spécification). Aucun n'a encore été essayé sur une vraie instance, pas plus que la sauvegarde et la restauration complètes, qui suivent l'API documentée des applications. Lisez toujours l'aperçu, et essayez d'abord une restauration complète sur une instance que vous pouvez vous permettre de perdre.
 
 Remarques : la gestion des médias est décochée par défaut, et les réglages propres à l'hôte (corbeille, permissions) ne sont jamais exportés. Les tailles par qualité d'un profil de Whisparr v2 sont conservées, sauf pour les qualités d'un groupe. Certains avertissements de l'aperçu viennent des serveurs et ne sont pas encore traduits : ils restent en anglais dans l'interface française.
 
@@ -111,7 +112,7 @@ Chaque tâche est un parcours en étapes (l'indicateur est en haut), et **toutes
 2. **Vérifiez** la liste de ce qui sera créé, modifié ou ignoré. Décochez ce que vous ne voulez pas, puis **Appliquez**. *Modifier* (ou l'étape 1 de l'indicateur) ramène en arrière sans rien perdre.
 3. **Terminé** : le résumé et le lien vers la sauvegarde de la cible.
 
-**Revenir en arrière** : ouvrez **Sauvegardes**, puis réimportez le fichier voulu (*Import → Un fichier*) avec *écraser* coché. Les éléments créés entre-temps ne sont pas supprimés.
+**Annuler un import** : ouvrez **Sauvegardes**, puis réimportez le fichier voulu (*Import → Un fichier*) avec *écraser* coché. Les éléments créés entre-temps ne sont pas supprimés. Pour revenir en arrière pour de bon, utilisez une [sauvegarde complète](#sauvegarde-et-restauration-complètes).
 
 *Écraser les éléments existants* concerne les éléments appariés par nom : formats personnalisés, profils de qualité, profils de synchronisation, indexeurs et proxys. Les tailles par qualité, le nommage et la gestion des médias sont toujours mis à jour s'ils sont cochés.
 
@@ -134,6 +135,26 @@ Les trois choix sont indépendants, et chacun peut rester sur *Aucun* : vous pou
 - **Radarr et Sonarr uniquement** : les guides ne couvrent rien d'autre.
 - Le fichier de *conflits* des guides n'est pas appliqué. Lisez la description de chaque groupe (par exemple, ne scorez qu'un seul des deux formats x265).
 - `TRASH_GUIDES_URL` désigne une autre archive, par exemple un miroir.
+
+### Sauvegarde et restauration complètes
+
+Les exports et imports déplacent une *configuration*. Une **sauvegarde complète** copie l'instance entière, pour la retrouver après une mise à jour ratée, une base abîmée ou un déménagement vers une autre machine.
+
+**Sauvegarder** : ouvrez **Sauvegardes**, choisissez une instance et cliquez sur **Sauvegarder maintenant**. Portarr demande à l'application de faire sa propre sauvegarde (le zip que vous obtiendriez par *Système → Sauvegardes* : base de données, réglages, clé API, mots de passe des indexeurs, historique), la télécharge et la garde dans `/config/backups/full/`, avec un export JSON de la configuration pris au même moment. La copie restée sur l'application n'est pas supprimée.
+
+**Restaurer** : cliquez sur **Restaurer…** à côté d'une sauvegarde, puis choisissez :
+
+- **Restauration complète** renvoie le zip à l'application, qui remplace *tout* par son contenu et redémarre. Cochez d'abord la confirmation. La cible est sauvegardée de la même façon juste avant (elle apparaît comme *avant une restauration*), et rien n'est touché si cela échoue : une restauration s'annule donc en restaurant cette sauvegarde.
+- **Restauration sélective** ouvre *Import* avec l'export JSON chargé et *écraser* coché : vous choisissez ce qu'il faut récupérer, avec l'aperçu habituel.
+
+Bon à savoir :
+
+- Une sauvegarde se restaure sur une instance **de la même application**, qui peut être une autre instance que celle d'origine, et pas sur une version plus ancienne que celle qui l'a faite.
+- La sauvegarde restaurée ramène sa propre clé API. Si elle diffère de celle que Portarr a gardée, Portarr le dit : modifiez l'instance et saisissez la clé actuelle.
+- Un zip contient vos clés API et les mots de passe des indexeurs. Traitez `/config` et les fichiers téléchargés comme des secrets, et définissez `AUTH_USER` et `AUTH_PASSWORD`.
+- Les sauvegardes s'accumulent jusqu'à ce que vous les supprimiez (bouton *Supprimer*). Leur taille est celle de la sauvegarde de l'application, en général quelques Mo.
+
+<img src="docs/screenshots/fr/07-full-backup.png" alt="La page Sauvegardes : une sauvegarde complète d'une instance Radarr et les choix pour la restaurer" width="860">
 
 ### Secrets des indexeurs Prowlarr
 
@@ -164,7 +185,7 @@ Vos instances et vos sauvegardes sont dans `/config` et survivent aux mises à j
 
 ### Sécurité
 
-Portarr détient les clés API de vos instances. Gardez-le sur votre réseau local et définissez `AUTH_USER` et `AUTH_PASSWORD` (authentification HTTP basique) sauf si le port est réservé à un réseau de confiance. Ne l'exposez pas directement sur Internet ; placez-le derrière un reverse proxy HTTPS si nécessaire. `/healthz` reste public.
+Portarr détient les clés API de vos instances, et ses sauvegardes complètes aussi. Gardez-le sur votre réseau local et définissez `AUTH_USER` et `AUTH_PASSWORD` (authentification HTTP basique) sauf si le port est réservé à un réseau de confiance. Ne l'exposez pas directement sur Internet ; placez-le derrière un reverse proxy HTTPS si nécessaire. `/healthz` reste public.
 
 ### Variables d'environnement
 

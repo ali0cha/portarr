@@ -21,13 +21,14 @@ Portarr is a small web tool that **exports and imports the quality configuration
 - **Preview first.** Every import lists what will be created, updated or skipped, field by field. You untick what you don't want.
 - **Automatic backup** of the target, saved right before anything is written. If the backup fails, nothing is changed.
 - **Never deletes** anything on the target.
+- **Full backups and restores** of a whole instance (the application's own backup, with a JSON export of its configuration), kept in Portarr.
 - **Safe to share.** Exports contain no API key or password, and your instances' keys never leave the server.
 - **Same application to same application** only: an export from Sonarr is refused on Radarr.
 - English and French interface (switch in the header), light and dark theme, and the application type is detected when you add an instance.
 
 Works with Radarr v4+/v5+, Sonarr v4+, Whisparr v2 and v3 "Eros" (API v3), Lidarr and Prowlarr (API v1).
 
-> Lidarr and Prowlarr were validated against simulations of their official OpenAPI specifications, and Whisparr against one based on its source code (it publishes no specification). None has been tried on a real instance yet. Always read the preview; the automatic backup covers the rest.
+> Lidarr and Prowlarr were validated against simulations of their official OpenAPI specifications, and Whisparr against one based on its source code (it publishes no specification). None has been tried on a real instance yet, and neither have the full backup and restore, which follow the applications' documented API. Always read the preview, and try a full restore on an instance you can afford to lose first.
 
 Notes: media management is unticked by default, and host-specific settings (recycle bin, permissions) are never exported. Whisparr v2's per-quality size limits inside a profile are kept, except for qualities inside a group. Some preview warnings come from the servers and are not translated yet: they stay in English in the French interface.
 
@@ -111,7 +112,7 @@ Every task is a step-by-step path (the indicator is at the top), and **all actio
 2. **Review** the list of what will be created, updated or skipped. Untick what you don't want, then **Apply**. *Change* (or step 1 of the indicator) goes back without losing anything.
 3. **Done**: the summary and the link to the backup of the target.
 
-**Roll back**: open **Backups**, then re-import the file you want (*Import → A file*) with *overwrite* ticked. Items created in the meantime are not deleted.
+**Roll back an import**: open **Backups**, then re-import the file you want (*Import → A file*) with *overwrite* ticked. Items created in the meantime are not deleted. To go back for good, use a [full backup](#full-backup-and-restore).
 
 *Overwrite existing items* applies to items matched by name: custom formats, quality profiles, sync profiles, indexers and proxies. Quality sizes, naming and media management are always updated when ticked.
 
@@ -134,6 +135,26 @@ The three choices are independent, and each one can be left on *None*: you can i
 - **Radarr and Sonarr only**: the guides cover nothing else.
 - The guides' *conflicts* file is not enforced. Read each group's description (for example, score only one of the two x265 formats).
 - `TRASH_GUIDES_URL` points to another archive, such as a mirror.
+
+### Full backup and restore
+
+Exports and imports move a *configuration*. A **full backup** copies the whole instance, so you can bring it back after a failed upgrade, a broken database or a move to another machine.
+
+**Back up**: open **Backups**, pick an instance and click **Back up now**. Portarr asks the application to make its own backup (the zip you would get from *System → Backup*: database, settings, API key, indexer passwords, history), downloads it, and keeps it in `/config/backups/full/` together with a JSON export of the configuration, taken at the same moment. The copy left on the application is not removed.
+
+**Restore**: click **Restore…** on a backup, then choose:
+
+- **Full restore** sends the zip back to the application, which replaces *everything* with its content and restarts. Tick the confirmation first. The target is backed up the same way beforehand (listed as *before a restore*), and nothing is touched if that fails, so a restore can be undone by restoring that backup.
+- **Selective restore** opens *Import* with the JSON export loaded and *overwrite* ticked, so you pick what to bring back, with the usual preview.
+
+Good to know:
+
+- A backup restores on an instance of **the same application**, which may be another instance than the one it came from, and not on an older version than the one that made it.
+- The restored backup brings its own API key. If it differs from the one Portarr has, Portarr says so: edit the instance and enter the current key.
+- A zip holds your API keys and indexer passwords. Treat `/config` and the downloaded files as secrets, and set `AUTH_USER` and `AUTH_PASSWORD`.
+- Backups pile up until you delete them (the *Delete* button). Their size is that of the application's backup, usually a few MB.
+
+<img src="docs/screenshots/en/07-full-backup.png" alt="The Backups page: a full backup of a Radarr instance and the choices to restore it" width="860">
 
 ### Prowlarr indexer secrets
 
@@ -164,7 +185,7 @@ Your instances and backups live in `/config` and survive updates.
 
 ### Security
 
-Portarr holds your instances' API keys. Keep it on your local network, and set `AUTH_USER` and `AUTH_PASSWORD` (HTTP basic authentication) unless the port is limited to a trusted network. Don't expose it directly to the Internet; put it behind an HTTPS reverse proxy if you must. `/healthz` stays public.
+Portarr holds your instances' API keys, and its full backups hold them too. Keep it on your local network, and set `AUTH_USER` and `AUTH_PASSWORD` (HTTP basic authentication) unless the port is limited to a trusted network. Don't expose it directly to the Internet; put it behind an HTTPS reverse proxy if you must. `/healthz` stays public.
 
 ### Environment variables
 
