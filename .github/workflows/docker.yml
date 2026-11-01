@@ -37,8 +37,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          # `latest` follows main and nothing else. The action also adds it to every semver tag by default, so tagging an
+          # older commit (or two tags at once) would move `latest` backwards.
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
       - uses: docker/build-push-action@v6
         with:
